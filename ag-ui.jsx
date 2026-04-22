@@ -187,42 +187,222 @@ function GameCard({ game, onClick, delay=0 }) {
   );
 }
 
-// ===================== FEATURED BANNER =====================
+// ===================== FEATURED BANNER (rota entre los 3 de Augusto) =====================
+const AUGUSTO_IDS = ['gta_augusto','minecraft_augusto','wwe_augusto'];
+
 function FeaturedBanner({ onPlay }) {
-  const g = GAMES_DATA.find(g=>g.id==='tetris');
+  const games = AUGUSTO_IDS.map(id => GAMES_DATA.find(g => g.id === id)).filter(Boolean);
+  const [idx, setIdx] = React.useState(0);
+  const [fading, setFading] = React.useState(false);
+
+  React.useEffect(() => {
+    const t = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setIdx(i => (i + 1) % games.length);
+        setFading(false);
+      }, 280);
+    }, 5000);
+    return () => clearInterval(t);
+  }, [games.length]);
+
+  const g = games[idx];
+  if (!g) return null;
+
   return (
     <div style={{
-      borderRadius:14,background:'linear-gradient(135deg,#0d1a2d 0%,#0d0d22 50%,#1a0d20 100%)',
-      border:'1px solid var(--border)',padding:'24px 28px',marginBottom:20,
+      borderRadius:16,
+      background:`linear-gradient(135deg,${g.bg} 0%,#0d0d22 55%,#1a0d20 100%)`,
+      border:`1px solid ${g.accent}44`,
+      padding:'26px 30px',marginBottom:22,
       display:'flex',alignItems:'center',gap:24,overflow:'hidden',position:'relative',
       animation:'fadeUp 0.3s ease',
+      boxShadow:`0 0 60px ${g.accent}18`,
+      transition:'background 0.5s, border-color 0.5s, box-shadow 0.5s',
     }}>
-      <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 75% 50%,rgba(6,182,212,0.1) 0%,transparent 60%)'}}/>
+      {/* Ambient glows */}
+      <div style={{position:'absolute',inset:0,background:`radial-gradient(ellipse at 75% 50%,${g.accent}22 0%,transparent 60%)`,transition:'background 0.5s'}}/>
       <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 25% 50%,rgba(168,85,247,0.07) 0%,transparent 60%)'}}/>
-      <div style={{position:'relative',flex:1,minWidth:0}}>
-        <div style={{display:'inline-flex',alignItems:'center',gap:6,background:'var(--orange)',
-          borderRadius:99,padding:'3px 12px',fontSize:11,fontWeight:800,color:'#000',
-          letterSpacing:'0.05em',marginBottom:10}}>🔥 DESTACADO</div>
-        <h2 style={{fontFamily:'var(--font-display)',fontSize:28,fontWeight:900,marginBottom:6,lineHeight:1.1}}>
-          {g.emoji} {g.title}
+
+      {/* Content */}
+      <div style={{
+        position:'relative',flex:1,minWidth:0,
+        opacity: fading ? 0 : 1,
+        transform: fading ? 'translateX(-8px)' : 'translateX(0)',
+        transition:'opacity 0.28s, transform 0.28s',
+      }}>
+        <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+          <div style={{display:'inline-flex',alignItems:'center',gap:6,
+            background:'linear-gradient(90deg,#f59e0b,#ef4444)',
+            borderRadius:99,padding:'3px 12px',fontSize:11,fontWeight:900,color:'#000',
+            letterSpacing:'0.05em'}}>⭐ EXCLUSIVO AUGUSTO</div>
+          <div style={{display:'inline-flex',alignItems:'center',gap:6,
+            background:'rgba(0,0,0,0.4)',border:`1px solid ${g.accent}66`,
+            borderRadius:99,padding:'3px 12px',fontSize:11,fontWeight:700,
+            color:g.accent,letterSpacing:'0.05em'}}>{g.catLabel}</div>
+        </div>
+        <h2 style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:900,marginBottom:8,lineHeight:1.1,
+          textShadow:`0 0 24px ${g.accent}66`}}>
+          {g.title}
         </h2>
-        <p style={{color:'var(--muted)',fontSize:13,marginBottom:16,textWrap:'pretty',maxWidth:340}}>{g.desc}</p>
+        <p style={{color:'#c8c8e0',fontSize:14,marginBottom:18,textWrap:'pretty',maxWidth:400,lineHeight:1.5}}>{g.desc}</p>
         <div style={{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
           <button onClick={()=>onPlay(g)} style={{
-            padding:'10px 24px',borderRadius:99,
-            background:'linear-gradient(90deg,var(--purple),var(--cyan))',
+            padding:'11px 26px',borderRadius:99,
+            background:`linear-gradient(90deg,${g.accent},var(--purple))`,
             color:'#fff',fontWeight:800,fontSize:14,fontFamily:'var(--font-body)',
-            boxShadow:'0 4px 20px rgba(168,85,247,0.4)',transition:'transform 0.15s,box-shadow 0.2s',
+            boxShadow:`0 4px 24px ${g.accent}66`,transition:'transform 0.15s,box-shadow 0.2s',
           }}
-          onMouseOver={e=>{e.target.style.transform='scale(1.04)';e.target.style.boxShadow='0 6px 28px rgba(168,85,247,0.6)';}}
-          onMouseOut={e=>{e.target.style.transform='scale(1)';e.target.style.boxShadow='0 4px 20px rgba(168,85,247,0.4)';}}>
+          onMouseOver={e=>{e.target.style.transform='scale(1.04)';e.target.style.boxShadow=`0 6px 32px ${g.accent}aa`;}}
+          onMouseOut={e=>{e.target.style.transform='scale(1)';e.target.style.boxShadow=`0 4px 24px ${g.accent}66`;}}>
             ▶ Jugar Ahora
           </button>
           <span style={{color:'var(--muted)',fontSize:12}}>⭐ {g.rating} · 🎮 {g.plays}</span>
         </div>
       </div>
-      <div style={{fontSize:80,flexShrink:0,filter:'drop-shadow(0 0 24px rgba(6,182,212,0.4))',
-        animation:'pulse 3s ease infinite'}}>{g.emoji}</div>
+
+      {/* Giant emoji with glow */}
+      <div style={{
+        fontSize:96,flexShrink:0,
+        filter:`drop-shadow(0 0 32px ${g.accent}88)`,
+        animation:'pulse 3s ease infinite',
+        opacity: fading ? 0 : 1,
+        transform: fading ? 'scale(0.85) rotate(-6deg)' : 'scale(1) rotate(0)',
+        transition:'opacity 0.28s, transform 0.28s',
+      }}>{g.emoji}</div>
+
+      {/* Rotation dots */}
+      <div style={{
+        position:'absolute',bottom:12,right:18,display:'flex',gap:6,
+      }}>
+        {games.map((_, i) => (
+          <div key={i} onClick={() => { setFading(true); setTimeout(()=>{setIdx(i);setFading(false);},280); }}
+            style={{
+              width: i===idx?18:6, height:6, borderRadius:99,
+              background: i===idx?g.accent:'rgba(255,255,255,0.25)',
+              cursor:'pointer', transition:'all 0.3s',
+            }}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ===================== AUGUSTO SECTION (cards grandes destacadas) =====================
+function AugustoSection({ onPlay }) {
+  const games = AUGUSTO_IDS.map(id => GAMES_DATA.find(g => g.id === id)).filter(Boolean);
+  return (
+    <div style={{marginBottom:26,animation:'fadeUp 0.4s ease 0.05s both'}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+        <div style={{
+          fontSize:20,width:34,height:34,borderRadius:10,
+          background:'linear-gradient(135deg,#f59e0b,#ef4444)',
+          display:'flex',alignItems:'center',justifyContent:'center',
+          boxShadow:'0 0 16px rgba(245,158,11,0.4)',
+        }}>⭐</div>
+        <h2 style={{fontFamily:'var(--font-display)',fontWeight:900,fontSize:20,
+          background:'linear-gradient(90deg,#f59e0b,#ef4444)',
+          WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
+          Juegos de Augusto
+        </h2>
+        <span style={{color:'var(--muted)',fontSize:12,background:'var(--surface2)',
+          borderRadius:99,padding:'2px 10px',border:'1px solid var(--border)'}}>Exclusivos</span>
+      </div>
+      <div style={{
+        display:'grid',
+        gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',
+        gap:16,
+      }}>
+        {games.map((g,i) => <AugustoCard key={g.id} game={g} onClick={onPlay} delay={i*0.06}/>)}
+      </div>
+    </div>
+  );
+}
+
+function AugustoCard({ game, onClick, delay=0 }) {
+  const [hov, setHov] = React.useState(false);
+  const best = getScores(game.id)[0];
+  return (
+    <div onClick={()=>onClick(game)} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{
+        borderRadius:16,
+        background:`linear-gradient(160deg,${game.bg} 0%,var(--surface) 70%)`,
+        border:`1px solid ${hov?game.accent:game.accent+'44'}`,
+        overflow:'hidden',cursor:'pointer',position:'relative',
+        transform:hov?'translateY(-6px) scale(1.015)':'translateY(0) scale(1)',
+        transition:'transform 0.25s cubic-bezier(0.34,1.56,0.64,1), border-color 0.2s, box-shadow 0.25s',
+        boxShadow:hov
+          ? `0 20px 60px rgba(0,0,0,0.7), 0 0 40px ${game.accent}55, 0 0 0 1px ${game.accent}88`
+          : `0 8px 24px rgba(0,0,0,0.4), 0 0 20px ${game.accent}22`,
+        animation:`fadeUp 0.4s ease ${delay}s both`,
+      }}>
+      {/* Exclusive ribbon */}
+      <div style={{
+        position:'absolute',top:10,right:-28,transform:'rotate(35deg)',
+        background:'linear-gradient(90deg,#f59e0b,#ef4444)',
+        color:'#000',fontWeight:900,fontSize:10,letterSpacing:'0.1em',
+        padding:'3px 32px',zIndex:2,
+        boxShadow:'0 2px 8px rgba(0,0,0,0.4)',
+      }}>EXCLUSIVO</div>
+
+      {/* Hero area */}
+      <div style={{
+        height:160,position:'relative',overflow:'hidden',
+        display:'flex',alignItems:'center',justifyContent:'center',
+      }}>
+        <div style={{position:'absolute',inset:0,background:`radial-gradient(circle at center, ${game.accent}44 0%, transparent 65%)`}}/>
+        <div style={{position:'absolute',inset:0,background:`linear-gradient(180deg,transparent 0%,${game.bg}aa 100%)`}}/>
+        <div style={{
+          fontSize:80,
+          filter:`drop-shadow(0 0 24px ${game.accent}aa)`,
+          transform:hov?'scale(1.2) rotate(-4deg)':'scale(1) rotate(0)',
+          transition:'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+          zIndex:1,
+        }}>{game.emoji}</div>
+
+        {/* Play button overlay */}
+        <div style={{
+          position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
+          background:`rgba(7,7,26,${hov?0.55:0})`,transition:'background 0.2s',zIndex:2,
+        }}>
+          <div style={{
+            width:56,height:56,borderRadius:99,
+            background:`linear-gradient(135deg,${game.accent},var(--purple))`,
+            display:'flex',alignItems:'center',justifyContent:'center',
+            fontSize:22,color:'#fff',fontWeight:900,
+            boxShadow:`0 0 32px ${game.accent}`,
+            opacity:hov?1:0,transform:hov?'scale(1)':'scale(0.6)',
+            transition:'opacity 0.2s, transform 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+          }}>▶</div>
+        </div>
+
+        {/* Category pill */}
+        <div style={{position:'absolute',top:10,left:10,background:'rgba(7,7,26,0.82)',
+          borderRadius:99,padding:'4px 10px',fontSize:10,fontWeight:800,
+          color:game.accent,backdropFilter:'blur(4px)',border:`1px solid ${game.accent}66`,letterSpacing:'0.06em',zIndex:2}}>
+          {game.catLabel}
+        </div>
+
+        {/* Best score */}
+        {best && <div style={{position:'absolute',bottom:10,left:10,background:'rgba(7,7,26,0.88)',
+          borderRadius:99,padding:'4px 12px',fontSize:11,fontWeight:800,
+          color:'#facc15',backdropFilter:'blur(4px)',border:'1px solid rgba(250,204,21,0.35)',zIndex:2}}>
+          🏆 {best.score.toLocaleString()}
+        </div>}
+      </div>
+
+      {/* Body */}
+      <div style={{padding:'14px 16px 16px'}}>
+        <div style={{fontFamily:'var(--font-display)',fontWeight:900,fontSize:17,marginBottom:5,
+          color:'var(--text)'}}>{game.title}</div>
+        <div style={{color:'var(--muted)',fontSize:12,marginBottom:10,lineHeight:1.45,
+          display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{game.desc}</div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{color:'#facc15',fontSize:11}}>{'★'.repeat(Math.round(game.rating))}</span>
+          <span style={{color:'var(--muted)',fontSize:11}}>{game.rating}</span>
+          <span style={{marginLeft:'auto',color:'var(--muted)',fontSize:11}}>🎮 {game.plays}</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -421,9 +601,13 @@ function AppShell({ onPlay }) {
     return ()=>window.removeEventListener('ag_profile_update',handler);
   },[]);
 
-  const filtered=GAMES_DATA.filter(g=>{
-    if(cat!=='all'&&g.cat!==cat) return false;
-    if(search&&!g.title.toLowerCase().includes(search.toLowerCase())&&!g.catLabel.toLowerCase().includes(search.toLowerCase())) return false;
+  const isHome = cat === 'all' && !search;
+
+  const filtered = GAMES_DATA.filter(g => {
+    if (cat !== 'all' && g.cat !== cat) return false;
+    if (search && !g.title.toLowerCase().includes(search.toLowerCase()) && !g.catLabel.toLowerCase().includes(search.toLowerCase())) return false;
+    // On home, Augusto games live in their own dedicated section — don't duplicate them in the main grid
+    if (isHome && AUGUSTO_IDS.includes(g.id)) return false;
     return true;
   });
 
@@ -433,11 +617,12 @@ function AppShell({ onPlay }) {
       <div style={{display:'flex',flex:1,overflow:'hidden'}}>
         <Sidebar active={cat} onCat={setCat} onPlay={onPlay}/>
         <main style={{flex:1,overflowY:'auto',padding:'20px'}}>
-          {cat==='all'&&!search&&<FeaturedBanner onPlay={onPlay}/>}
+          {isHome && <FeaturedBanner onPlay={onPlay}/>}
+          {isHome && <AugustoSection onPlay={onPlay}/>}
 
           <div style={{marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
             <h2 style={{fontFamily:'var(--font-display)',fontWeight:900,fontSize:18}}>
-              {search?`"${search}"`:cat==='all'?'Todos los Juegos':CATEGORIES.find(c=>c.id===cat)?.label}
+              {search?`"${search}"`:cat==='all'?'Más Juegos':CATEGORIES.find(c=>c.id===cat)?.label}
             </h2>
             <span style={{color:'var(--muted)',fontSize:12,background:'var(--surface2)',
               borderRadius:99,padding:'2px 10px',border:'1px solid var(--border)'}}>{filtered.length}</span>
