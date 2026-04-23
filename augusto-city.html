@@ -299,6 +299,126 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   border-radius:8px; cursor:pointer; font-weight:900;
   letter-spacing:2px;
 }
+
+/* ─── MOBILE RESPONSIVE ─── */
+.desktop-only { display: block; }
+.mobile-only  { display: none; }
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+  .mobile-only  { display: block !important; }
+  /* Top-left name smaller */
+  #name-tag {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    left: calc(10px + env(safe-area-inset-left, 0px));
+    font-size:14px; letter-spacing:1px;
+  }
+  /* Score moves to top-left under name (no minimap crowding) */
+  #score-tag {
+    top: calc(28px + env(safe-area-inset-top, 0px));
+    left: calc(10px + env(safe-area-inset-left, 0px));
+    right:auto;
+    font-size:12px;
+  }
+  /* Wanted stars smaller, pinned top-right */
+  #wanted-wrap {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    right: calc(10px + env(safe-area-inset-right, 0px));
+  }
+  #wanted-label { font-size:8px; }
+  #wanted-stars { font-size:14px; letter-spacing:2px; }
+  /* Mission panel compact */
+  #mission-panel {
+    top: calc(54px + env(safe-area-inset-top, 0px));
+    min-width:140px; max-width:80vw;
+    padding:5px 10px;
+  }
+  #mission-header { font-size:8px; letter-spacing:1.5px; }
+  #mission-title { font-size:11px; margin:1px 0; }
+  #mission-progress { font-size:10px; }
+  /* Kill feed smaller */
+  #kill-feed {
+    top: calc(44px + env(safe-area-inset-top, 0px));
+    right: calc(10px + env(safe-area-inset-right, 0px));
+    font-size:10px;
+  }
+  /* Health bar narrower, pushed up from joystick */
+  #health-wrap {
+    bottom: calc(200px + env(safe-area-inset-bottom, 0px));
+    left: calc(10px + env(safe-area-inset-left, 0px));
+  }
+  #health-track { width:120px; height:11px; }
+  #health-label { font-size:9px; }
+  /* Ammo top-right-ish, below wanted */
+  #ammo-wrap {
+    bottom:auto;
+    top: calc(44px + env(safe-area-inset-top, 0px));
+    right:auto;
+    left:50%;
+    transform:translateX(-50%);
+    text-align:center;
+  }
+  #weapon-name { font-size:10px; }
+  #ammo-count { font-size:18px; }
+  /* Minimap smaller, bottom-right */
+  #minimap-wrap {
+    width:80px; height:80px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    right: calc(10px + env(safe-area-inset-right, 0px));
+  }
+  #minimap-border { width:80px; height:80px; }
+  #minimap-canvas { width:80px; height:80px; }
+  /* Joystick: bottom-left, offset so health fits above */
+  #joystick-zone {
+    bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    left: calc(18px + env(safe-area-inset-left, 0px));
+    width:100px; height:100px;
+  }
+  #js-base { width:100px; height:100px; }
+  #js-knob { width:40px; height:40px; }
+  /* Shoot button bigger but spaced */
+  #btn-shoot {
+    bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    right: calc(100px + env(safe-area-inset-right, 0px));
+    width:72px; height:72px;
+    font-size:26px;
+  }
+  /* Sprint above shoot */
+  #btn-sprint {
+    bottom: calc(130px + env(safe-area-inset-bottom, 0px));
+    right: calc(108px + env(safe-area-inset-right, 0px));
+    width:52px; height:52px;
+    font-size:18px;
+  }
+  /* Action button (enter car) — stack above sprint */
+  #btn-action {
+    bottom: calc(200px + env(safe-area-inset-bottom, 0px));
+    right: calc(110px + env(safe-area-inset-right, 0px));
+    width:58px; height:58px;
+    font-size:22px;
+  }
+  /* Hide desktop hint */
+  #hint { display:none; }
+  /* Crosshair dot a bit smaller */
+  #xhair { width:18px; height:18px; }
+  /* Start screen more compact */
+  .start-title { font-size:36px !important; }
+  .start-sub { font-size:14px !important; }
+  .start-controls { font-size:12px !important; }
+  #btn-play { font-size:18px !important; padding:12px 32px !important; }
+  /* Game-over more compact */
+  .go-title { font-size:36px !important; }
+  .go-sub { font-size:14px !important; }
+  .go-score { font-size:22px !important; }
+  #btn-retry { font-size:16px !important; padding:12px 28px !important; }
+}
+/* Very small phones: shrink further */
+@media (max-width: 380px) {
+  #health-track { width:100px; }
+  #joystick-zone, #js-base { width:90px; height:90px; }
+  #btn-shoot { width:64px; height:64px; right:calc(90px + env(safe-area-inset-right, 0px)); }
+  #btn-sprint { width:46px; height:46px; right:calc(100px + env(safe-area-inset-right, 0px)); }
+  #btn-action { width:52px; height:52px; right:calc(104px + env(safe-area-inset-right, 0px)); }
+}
 </style>
 </head>
 <body>
@@ -359,13 +479,20 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
 <div id="start-screen">
   <div class="start-title">AUGUSTO CITY</div>
   <div class="start-sub">Open World · San Andreas Style</div>
-  <div class="start-controls">
+  <div class="start-controls desktop-only">
     <div class="ctrl-row"><span>WASD</span><span>Moverse</span></div>
     <div class="ctrl-row"><span>Mouse</span><span>Cámara</span></div>
     <div class="ctrl-row"><span>Clic / F</span><span>Disparar</span></div>
     <div class="ctrl-row"><span>E</span><span>Auto / Arma</span></div>
     <div class="ctrl-row"><span>Shift</span><span>Correr</span></div>
     <div class="ctrl-row"><span>R</span><span>Recargar</span></div>
+  </div>
+  <div class="start-controls mobile-only">
+    <div class="ctrl-row"><span>🕹️ Joystick</span><span>Moverse</span></div>
+    <div class="ctrl-row"><span>Arrastrar</span><span>Cámara</span></div>
+    <div class="ctrl-row"><span>🔫 Botón</span><span>Disparar</span></div>
+    <div class="ctrl-row"><span>🚗 Botón</span><span>Auto / Arma</span></div>
+    <div class="ctrl-row"><span>⚡ Botón</span><span>Correr</span></div>
   </div>
   <button id="btn-play" onclick="startGame()">JUGAR</button>
 </div>
@@ -2437,7 +2564,7 @@ function setupInput() {
   document.addEventListener('mousemove', e => {
     if (!pointerLocked) return;
     CAM.theta -= e.movementX * 0.0028;
-    CAM.phi    = Math.max(0.12, Math.min(1.25, CAM.phi - e.movementY * 0.0028));
+    CAM.phi    = Math.max(0.12, Math.min(1.25, CAM.phi + e.movementY * 0.0028));
   });
   document.addEventListener('mousedown', e => {
     if (e.button===0 && pointerLocked) doShoot();
@@ -2480,7 +2607,7 @@ function setupMobile() {
         const ddx = t.clientX - camTouch.lx;
         const ddy = t.clientY - camTouch.ly;
         CAM.theta -= ddx * 0.005;
-        CAM.phi = Math.max(0.12, Math.min(1.25, CAM.phi - ddy * 0.005));
+        CAM.phi = Math.max(0.12, Math.min(1.25, CAM.phi + ddy * 0.005));
         camTouch.lx = t.clientX;
         camTouch.ly = t.clientY;
       }
