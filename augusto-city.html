@@ -592,7 +592,7 @@ let renderer, scene, camera, clock;
 let gameRunning = false;
 let playerDead = false;
 
-const WORLD = 450; // world half-size (ampliado 2.5×)
+const WORLD = 230; // half-size
 const MAP_SCALE = 110 / (WORLD * 2);
 
 // ─── Input ───
@@ -654,39 +654,41 @@ let   mobileFireTimer = null;
 function init() {
   const canvas = document.getElementById('c');
 
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference:'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference:'high-performance', logarithmicDepthBuffer: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  // No tone mapping + linear output: with this Lambert/Phong pipeline,
+  // sRGB encoding was making procedural canvas textures look washed out.
+  renderer.outputEncoding = THREE.LinearEncoding;
+  renderer.toneMapping = THREE.NoToneMapping;
 
   scene = new THREE.Scene();
-  // Bigger world → less aggressive fog, blue tint for atmosphere
-  scene.fog = new THREE.FogExp2(0xa8c8e8, 0.0035);
+  scene.fog = new THREE.FogExp2(0xa8c8e8, 0.0045);
 
-  // Build a vertical-gradient sky (sphere with shader-like material)
-  const skyGeo = new THREE.SphereGeometry(900, 32, 16);
+  // Vertical-gradient sky
+  const skyGeo = new THREE.SphereGeometry(700, 32, 16);
   const skyCanvas = document.createElement('canvas');
   skyCanvas.width = 64; skyCanvas.height = 256;
   const sctx = skyCanvas.getContext('2d');
   const grad = sctx.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0,   '#1a3960');  // zenith
+  grad.addColorStop(0,   '#1a3960');
   grad.addColorStop(0.4, '#5a8ec8');
   grad.addColorStop(0.7, '#a8c8e8');
-  grad.addColorStop(1,   '#e8d8b0');  // horizon warm
+  grad.addColorStop(1,   '#e8d8b0');
   sctx.fillStyle = grad;
   sctx.fillRect(0, 0, 64, 256);
   const skyTex = new THREE.CanvasTexture(skyCanvas);
-  const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false });
+  skyTex.encoding = THREE.LinearEncoding;
+  const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false });
   const sky = new THREE.Mesh(skyGeo, skyMat);
   scene.add(sky);
 
   renderer.setClearColor(0xa8c8e8);
 
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1500);
+  // Larger near + smaller far for better z-precision (kills the road flicker)
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.5, 900);
   clock  = new THREE.Clock(false);
 
   buildLights();
@@ -702,7 +704,6 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // Hide mobile controls on desktop
   if (!isMobile()) {
     document.getElementById('mob-controls').style.display = 'none';
     document.getElementById('hint').style.display = 'block';
@@ -715,9 +716,9 @@ function init() {
    LIGHTING
 ═══════════════════════════════════════════════════ */
 function buildLights() {
-  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.65));
 
-  const sun = new THREE.DirectionalLight(0xfff0d8, 1.2);
+  const sun = new THREE.DirectionalLight(0xfff0d8, 1.0);
   sun.position.set(60, 100, 40);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -728,11 +729,9 @@ function buildLights() {
   sc.right = sc.top = 75;
   scene.add(sun);
   scene.add(sun.target);
-  // Save reference for player-tracking shadows
   window.__sunLight = sun;
 
-  // Sky/ground hemisphere
-  scene.add(new THREE.HemisphereLight(0x87CEEB, 0x4a3520, 0.45));
+  scene.add(new THREE.HemisphereLight(0xb0d4ee, 0x554433, 0.55));
 }
 
 /* ═══════════════════════════════════════════════════
@@ -893,20 +892,21 @@ function buildWorld() {
   scene.add(gnd);
 
   // ─── Procedural road grid ───
-  // Main avenues every 100 units, secondary every 50
+  // Main avenues every 100 units, secondary every 50.
+  // Horizontal & vertical roads use slightly different y offsets to avoid coplanar z-fighting at intersections.
   const GRID_STEP = 100;
   for (let x = -WORLD; x <= WORLD; x += GRID_STEP) {
-    makeRoad(x, 0, 12, WORLD*2, false);
+    makeRoad(x, 0, 12, WORLD*2, false, 0.02); // verticals slightly lower
   }
   for (let z = -WORLD; z <= WORLD; z += GRID_STEP) {
-    makeRoad(0, z, WORLD*2, 12, true);
+    makeRoad(0, z, WORLD*2, 12, true, 0.04);  // horizontals slightly higher
   }
   // Secondary roads (narrower)
   for (let x = -WORLD + 50; x < WORLD; x += GRID_STEP) {
-    makeRoad(x, 0, 8, WORLD*2, false);
+    makeRoad(x, 0, 8, WORLD*2, false, 0.02);
   }
   for (let z = -WORLD + 50; z < WORLD; z += GRID_STEP) {
-    makeRoad(0, z, WORLD*2, 8, true);
+    makeRoad(0, z, WORLD*2, 8, true, 0.04);
   }
 
   // Sidewalks along main avenues only
@@ -948,8 +948,8 @@ function buildWorld() {
   };
 
   let placed = 0, attempts = 0;
-  const TARGET_BUILDINGS = 140;
-  while (placed < TARGET_BUILDINGS && attempts < 1500) {
+  const TARGET_BUILDINGS = 70;
+  while (placed < TARGET_BUILDINGS && attempts < 800) {
     attempts++;
     const w = 12 + Math.floor(Math.random() * 14);
     const d = 12 + Math.floor(Math.random() * 14);
@@ -966,7 +966,7 @@ function buildWorld() {
 
   // ─── Trees scattered ───
   let treesPlaced = 0;
-  for (let i = 0; i < 600 && treesPlaced < 220; i++) {
+  for (let i = 0; i < 300 && treesPlaced < 110; i++) {
     const x = (Math.random() - 0.5) * (WORLD*2 - 30);
     const z = (Math.random() - 0.5) * (WORLD*2 - 30);
     if (isOnRoad(x, z, 2, 2)) continue;
@@ -1020,6 +1020,10 @@ function buildWorld() {
 /* ═══════════════════════════════════════════════════
    VEHICLES
 ═══════════════════════════════════════════════════ */
+// Shared vehicle geometries / materials cache (reduces GPU memory + draw calls)
+const VEH_CACHE = {};
+function vehGeo(key, fn) { return VEH_CACHE[key] || (VEH_CACHE[key] = fn()); }
+
 function makeVehicle(x, z, rot, color, type) {
   const g = new THREE.Group();
 
@@ -1028,263 +1032,143 @@ function makeVehicle(x, z, rot, color, type) {
   const isSport = type === 'sport';
   const isSUV   = type === 'suv';
 
-  // Profile per type — sport is low+wide, suv tall, truck big, sedan default
-  let bodyL, bodyW, bodyH, hoodL, trunkL, cabinL, cabinH, beltline;
-  if (isSport)      { bodyL=4.4; bodyW=1.95; bodyH=0.55; hoodL=1.4; trunkL=1.2; cabinL=1.6; cabinH=0.55; beltline=0.65; }
-  else if (isSUV)   { bodyL=4.6; bodyW=2.05; bodyH=0.85; hoodL=1.3; trunkL=1.0; cabinL=2.1; cabinH=0.95; beltline=0.55; }
-  else if (isTruck) { bodyL=5.4; bodyW=2.2;  bodyH=0.85; hoodL=1.5; trunkL=2.6; cabinL=1.6; cabinH=1.0;  beltline=0.55; }
-  else              { bodyL=4.4; bodyW=1.95; bodyH=0.7;  hoodL=1.3; trunkL=1.1; cabinL=1.85;cabinH=0.7;  beltline=0.6; }
+  // Body profile
+  let bodyL, bodyW, bodyH, hoodL, trunkL, cabinL, cabinH, cabinXOff;
+  if (isSport)      { bodyL=4.4; bodyW=1.95; bodyH=0.55; hoodL=1.3; trunkL=1.0; cabinL=1.7; cabinH=0.55; cabinXOff=-0.05; }
+  else if (isSUV)   { bodyL=4.5; bodyW=2.0;  bodyH=0.85; hoodL=1.2; trunkL=0.9; cabinL=2.0; cabinH=0.85; cabinXOff=-0.1; }
+  else if (isTruck) { bodyL=5.4; bodyW=2.15; bodyH=0.85; hoodL=1.4; trunkL=2.6; cabinL=1.6; cabinH=0.95; cabinXOff=-0.5; }
+  else              { bodyL=4.4; bodyW=1.9;  bodyH=0.7;  hoodL=1.2; trunkL=1.0; cabinL=1.85;cabinH=0.7;  cabinXOff=-0.05; }
 
-  const bodyMat   = new THREE.MeshPhongMaterial({ color, shininess:60, specular:0x222222 });
+  // Materials — Phong with no specular crush, brighter pop
+  const bodyMat   = new THREE.MeshPhongMaterial({ color, shininess:80, specular:0x444444 });
   const trimMat   = new THREE.MeshPhongMaterial({ color:0x111111, shininess:30 });
-  const winMat    = new THREE.MeshPhongMaterial({ color:0x0d1820, shininess:120, specular:0x4488aa });
-  const groundY   = 0.45; // chassis baseline (above wheels)
+  const winMat    = new THREE.MeshPhongMaterial({ color:0x223040, shininess:140, specular:0x6688aa, transparent:true, opacity:0.85 });
 
-  // ── Main chassis (lower body) ──
-  const chassis = new THREE.Mesh(
-    new THREE.BoxGeometry(bodyL, bodyH, bodyW),
-    bodyMat
-  );
+  const wheelR = isSUV ? 0.42 : isTruck ? 0.46 : isSport ? 0.36 : 0.38;
+  const groundY = wheelR; // chassis sits on top of wheels
+
+  // ── Chassis (lower body block) ──
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(bodyL, bodyH, bodyW), bodyMat);
   chassis.position.y = groundY + bodyH/2;
   chassis.castShadow = chassis.receiveShadow = true;
   g.add(chassis);
 
-  // ── Lower side trim (black sill) ──
-  [-1, 1].forEach(side => {
-    const sill = new THREE.Mesh(
-      new THREE.BoxGeometry(bodyL*0.94, 0.18, 0.08),
-      trimMat
-    );
-    sill.position.set(0, groundY + 0.1, side*bodyW/2);
-    g.add(sill);
-  });
-
-  // ── Hood ── (slightly lower than chassis top for shape definition)
-  const hoodH = isSport ? 0.18 : 0.22;
-  const hood = new THREE.Mesh(
-    new THREE.BoxGeometry(hoodL, hoodH, bodyW*0.96),
-    bodyMat
-  );
-  hood.position.set(bodyL/2 - hoodL/2, groundY + bodyH + hoodH/2, 0);
+  // ── Hood (raised lip in front so it reads as 3D) ──
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(hoodL, 0.18, bodyW*0.92), bodyMat);
+  hood.position.set(bodyL/2 - hoodL/2, groundY + bodyH + 0.09, 0);
   hood.castShadow = true;
   g.add(hood);
 
-  // ── Trunk ── (only sedan/sport — truck has cargo bed instead)
+  // ── Trunk (only if not truck) ──
   if (!isTruck) {
-    const trunkH = isSport ? 0.16 : 0.20;
-    const trunk = new THREE.Mesh(
-      new THREE.BoxGeometry(trunkL, trunkH, bodyW*0.96),
-      bodyMat
-    );
-    trunk.position.set(-bodyL/2 + trunkL/2, groundY + bodyH + trunkH/2, 0);
+    const trunk = new THREE.Mesh(new THREE.BoxGeometry(trunkL, 0.16, bodyW*0.92), bodyMat);
+    trunk.position.set(-bodyL/2 + trunkL/2, groundY + bodyH + 0.08, 0);
     trunk.castShadow = true;
     g.add(trunk);
   }
 
-  // ── Cabin (roof) ── lower for sport, tall for suv/truck
-  const cabinXOff = isTruck ? -bodyL*0.05 : 0;
-  const cabin = new THREE.Mesh(
-    new THREE.BoxGeometry(cabinL, cabinH, bodyW*0.93),
-    bodyMat
-  );
+  // ── Cabin (passenger compartment) ──
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinL, cabinH, bodyW*0.88), bodyMat);
   cabin.position.set(cabinXOff, groundY + bodyH + cabinH/2, 0);
   cabin.castShadow = true;
   g.add(cabin);
 
-  // ── Slanted windshield (front) ──
-  const wsThickness = 0.04;
-  const ws = new THREE.Mesh(
-    new THREE.PlaneGeometry(bodyW*0.88, cabinH*1.05),
+  // ── Glass: single canopy (front+roof+rear) ── no z-fighting since it's at +0.01 from cabin top, smaller footprint
+  const glass = new THREE.Mesh(
+    new THREE.BoxGeometry(cabinL*0.85, cabinH*0.65, bodyW*0.78),
     winMat
   );
-  ws.rotation.y = -Math.PI/2;
-  ws.rotation.x = -0.32; // slant
-  ws.position.set(cabinXOff + cabinL/2 + 0.1, groundY + bodyH + cabinH*0.5, 0);
-  g.add(ws);
-
-  // ── Slanted rear window ──
-  const rw = new THREE.Mesh(
-    new THREE.PlaneGeometry(bodyW*0.88, cabinH*0.95),
-    winMat
-  );
-  rw.rotation.y = Math.PI/2;
-  rw.rotation.x = 0.30;
-  rw.position.set(cabinXOff - cabinL/2 - 0.1, groundY + bodyH + cabinH*0.5, 0);
-  g.add(rw);
-
-  // ── Side windows ──
-  [-1, 1].forEach(side => {
-    const sw = new THREE.Mesh(
-      new THREE.BoxGeometry(cabinL*0.85, cabinH*0.7, 0.04),
-      winMat
-    );
-    sw.position.set(cabinXOff, groundY + bodyH + cabinH*0.6, side*bodyW*0.47);
-    g.add(sw);
-  });
+  glass.position.set(cabinXOff, groundY + bodyH + cabinH*0.55, 0);
+  g.add(glass);
 
   // ── Truck cargo bed ──
   if (isTruck) {
-    const bedH = 0.6;
     const bed = new THREE.Mesh(
-      new THREE.BoxGeometry(2.5, bedH, bodyW*0.96),
-      new THREE.MeshPhongMaterial({ color:0x4a2c1c, shininess:10 })
+      new THREE.BoxGeometry(2.4, 0.5, bodyW*0.95),
+      new THREE.MeshPhongMaterial({ color:0x6b4226, shininess:15 })
     );
-    bed.position.set(-bodyL/2 + 1.5, groundY + bodyH + bedH/2, 0);
+    bed.position.set(-bodyL/2 + 1.4, groundY + bodyH + 0.25, 0);
     bed.castShadow = true;
     g.add(bed);
-    // Bed walls
-    [-1, 1].forEach(side => {
-      const wall = new THREE.Mesh(
-        new THREE.BoxGeometry(2.5, 0.5, 0.08),
-        new THREE.MeshPhongMaterial({ color:0x3a2014 })
-      );
-      wall.position.set(-bodyL/2 + 1.5, groundY + bodyH + bedH + 0.25, side*bodyW*0.46);
-      g.add(wall);
-    });
   }
 
-  // ── Front grille ──
+  // ── Front grille + bumper ──
   const grille = new THREE.Mesh(
-    new THREE.BoxGeometry(0.05, bodyH*0.55, bodyW*0.65),
+    new THREE.BoxGeometry(0.06, bodyH*0.6, bodyW*0.6),
     new THREE.MeshPhongMaterial({ color:0x222222, shininess:80 })
   );
-  grille.position.set(bodyL/2 + 0.02, groundY + bodyH*0.45, 0);
+  grille.position.set(bodyL/2 + 0.04, groundY + bodyH*0.45, 0);
   g.add(grille);
 
-  // ── Front bumper ──
-  const fbump = new THREE.Mesh(
-    new THREE.BoxGeometry(0.15, 0.18, bodyW*0.95),
-    trimMat
-  );
+  const fbump = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, bodyW*0.95), trimMat);
   fbump.position.set(bodyL/2 + 0.05, groundY + 0.12, 0);
   g.add(fbump);
-
-  // ── Rear bumper ──
-  const rbump = fbump.clone();
-  rbump.position.x = -bodyL/2 - 0.05;
+  const rbump = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, bodyW*0.95), trimMat);
+  rbump.position.set(-bodyL/2 - 0.05, groundY + 0.12, 0);
   g.add(rbump);
 
-  // ── Headlights (with chrome housing) ──
+  // ── Headlights (single combined mesh per side) ──
+  const headLightMat = new THREE.MeshBasicMaterial({ color:0xfff0c0 });
   [-1, 1].forEach(side => {
-    const housing = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.22, 0.42),
-      new THREE.MeshPhongMaterial({ color:0xdddddd, shininess:120 })
-    );
-    housing.position.set(bodyL/2 - 0.04, groundY + bodyH*0.55, side*bodyW*0.35);
-    g.add(housing);
-    const lens = new THREE.Mesh(
-      new THREE.BoxGeometry(0.04, 0.18, 0.36),
-      new THREE.MeshBasicMaterial({ color:0xFFFDE7 })
-    );
-    lens.position.set(bodyL/2 + 0.01, groundY + bodyH*0.55, side*bodyW*0.35);
-    g.add(lens);
+    const hl = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.4), headLightMat);
+    hl.position.set(bodyL/2 + 0.06, groundY + bodyH*0.55, side*bodyW*0.32);
+    g.add(hl);
   });
 
   // ── Taillights ──
+  const tailMat = new THREE.MeshBasicMaterial({ color:0xff2222 });
   [-1, 1].forEach(side => {
-    const tl = new THREE.Mesh(
-      new THREE.BoxGeometry(0.06, 0.15, 0.38),
-      new THREE.MeshBasicMaterial({ color:0xcc1111 })
-    );
-    tl.position.set(-bodyL/2 - 0.01, groundY + bodyH*0.6, side*bodyW*0.35);
+    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.36), tailMat);
+    tl.position.set(-bodyL/2 - 0.06, groundY + bodyH*0.6, side*bodyW*0.32);
     g.add(tl);
   });
 
-  // ── Side mirrors ──
-  [-1, 1].forEach(side => {
-    const m = new THREE.Mesh(
-      new THREE.BoxGeometry(0.18, 0.12, 0.1),
-      bodyMat
-    );
-    m.position.set(cabinXOff + cabinL/2 - 0.1, groundY + bodyH + cabinH*0.45, side*(bodyW*0.5 + 0.1));
-    g.add(m);
-  });
+  // ── Wheels: tire + rim only, no separate hub/arch (saves 4 meshes/car) ──
+  const tireGeo = vehGeo('tire_'+wheelR, () => new THREE.CylinderGeometry(wheelR, wheelR, 0.3, 14));
+  const rimGeo  = vehGeo('rim_'+wheelR,  () => new THREE.CylinderGeometry(wheelR*0.55, wheelR*0.55, 0.32, 8));
+  const tireMat = new THREE.MeshLambertMaterial({ color:0x111111 });
+  const rimMat  = new THREE.MeshPhongMaterial({ color:0xcccccc, shininess:120, specular:0x888888 });
 
-  // ── Door lines (purely cosmetic dark seams) ──
-  [-1, 1].forEach(side => {
-    const door = new THREE.Mesh(
-      new THREE.BoxGeometry(0.02, bodyH*0.7, 0.02),
-      trimMat
-    );
-    door.position.set(cabinXOff - cabinL*0.1, groundY + bodyH*0.55, side*bodyW/2 + (side*0.005));
-    g.add(door);
-  });
-
-  // ── Wheels ── proper tires + visible rims with spokes
-  const wheelRadius = isSUV ? 0.46 : isTruck ? 0.5 : isSport ? 0.42 : 0.4;
-  const tireGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 0.32, 18);
-  const tireMat = new THREE.MeshLambertMaterial({ color:0x0a0a0a });
-  const rimGeo  = new THREE.CylinderGeometry(wheelRadius*0.62, wheelRadius*0.62, 0.34, 12);
-  const rimMat  = new THREE.MeshPhongMaterial({ color:0xc8c8c8, shininess:120, specular:0x666666 });
-  const hubGeo  = new THREE.CylinderGeometry(wheelRadius*0.18, wheelRadius*0.18, 0.36, 8);
-  const hubMat  = new THREE.MeshPhongMaterial({ color:0x888888, shininess:80 });
-
-  const wheelXs = isTruck
-    ? [bodyL*0.32, -bodyL*0.32]
-    : isSUV
-      ? [bodyL*0.34, -bodyL*0.32]
-      : [bodyL*0.32, -bodyL*0.32];
+  const wheelXs = [bodyL*0.32, -bodyL*0.32];
   const wheelRefs = [];
   wheelXs.forEach(wx => {
     [-1, 1].forEach(side => {
       const tire = new THREE.Mesh(tireGeo, tireMat);
-      tire.position.set(wx, wheelRadius, side*bodyW/2);
+      tire.position.set(wx, wheelR, side*bodyW/2);
       tire.rotation.x = Math.PI/2;
       tire.castShadow = true;
       g.add(tire);
       wheelRefs.push(tire);
 
       const rim = new THREE.Mesh(rimGeo, rimMat);
-      rim.position.copy(tire.position);
+      rim.position.set(wx, wheelR, side*bodyW/2);
       rim.rotation.x = Math.PI/2;
       g.add(rim);
       wheelRefs.push(rim);
-
-      const hub = new THREE.Mesh(hubGeo, hubMat);
-      hub.position.copy(tire.position);
-      hub.rotation.x = Math.PI/2;
-      g.add(hub);
-
-      // Wheel arch (fender) - dark cover above wheel
-      const arch = new THREE.Mesh(
-        new THREE.BoxGeometry(wheelRadius*2.4, 0.1, 0.4),
-        trimMat
-      );
-      arch.position.set(wx, wheelRadius + 0.18, side*bodyW/2);
-      g.add(arch);
     });
   });
 
-  // ── Taxi sign / spoiler ──
+  // ── Taxi sign ── single emissive box
   if (isTaxi) {
     const sign = new THREE.Mesh(
-      new THREE.BoxGeometry(0.9, 0.28, 0.45),
-      new THREE.MeshBasicMaterial({ color:0xFFD700 })
+      new THREE.BoxGeometry(0.85, 0.28, 0.4),
+      new THREE.MeshBasicMaterial({ color:0xffd700 })
     );
-    sign.position.set(0, groundY + bodyH + cabinH + 0.16, 0);
+    sign.position.set(0, groundY + bodyH + cabinH + 0.18, 0);
     g.add(sign);
-    // "TAXI" text via emissive plane (small)
-    const txt = new THREE.Mesh(
-      new THREE.BoxGeometry(0.92, 0.18, 0.02),
-      new THREE.MeshBasicMaterial({ color:0x000000 })
-    );
-    txt.position.set(0, groundY + bodyH + cabinH + 0.16, 0.24);
-    g.add(txt);
   }
+
+  // ── Sport spoiler ──
   if (isSport) {
     const spoiler = new THREE.Mesh(
-      new THREE.BoxGeometry(0.12, 0.12, bodyW*0.8),
+      new THREE.BoxGeometry(0.15, 0.1, bodyW*0.8),
       bodyMat
     );
-    spoiler.position.set(-bodyL/2 + 0.1, groundY + bodyH + 0.32, 0);
+    spoiler.position.set(-bodyL/2 + 0.05, groundY + bodyH + 0.28, 0);
     g.add(spoiler);
-    // Spoiler stems
     [-1, 1].forEach(side => {
-      const stem = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1, 0.2, 0.08),
-        trimMat
-      );
-      stem.position.set(-bodyL/2 + 0.1, groundY + bodyH + 0.22, side*bodyW*0.32);
+      const stem = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.08), trimMat);
+      stem.position.set(-bodyL/2 + 0.05, groundY + bodyH + 0.18, side*bodyW*0.3);
       g.add(stem);
     });
   }
@@ -1427,7 +1311,7 @@ function updateDriving(dt) {
   }
 }
 
-function makeRoad(cx, cz, w, d, horiz) {
+function makeRoad(cx, cz, w, d, horiz, yOffset) {
   const rTex = TEX.roadH.clone();
   rTex.needsUpdate = true;
   rTex.wrapS = rTex.wrapT = THREE.RepeatWrapping;
@@ -1436,12 +1320,18 @@ function makeRoad(cx, cz, w, d, horiz) {
 
   const m = new THREE.Mesh(
     new THREE.PlaneGeometry(w, d),
-    new THREE.MeshLambertMaterial({ map: rTex })
+    new THREE.MeshLambertMaterial({
+      map: rTex,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    })
   );
   m.rotation.x = -Math.PI/2;
   if (!horiz) m.rotation.z = Math.PI/2;
-  m.position.set(cx, 0.01, cz);
+  m.position.set(cx, yOffset != null ? yOffset : 0.03, cz);
   m.receiveShadow = true;
+  m.renderOrder = 1;
   scene.add(m);
 }
 
@@ -1452,11 +1342,17 @@ function makeSidewalk(cx, cz, w, d) {
   sTex.repeat.set(w/4, d/4);
   const m = new THREE.Mesh(
     new THREE.PlaneGeometry(w, d),
-    new THREE.MeshLambertMaterial({ map: sTex })
+    new THREE.MeshLambertMaterial({
+      map: sTex,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    })
   );
   m.rotation.x = -Math.PI/2;
-  m.position.set(cx, 0.02, cz);
+  m.position.set(cx, 0.06, cz);
   m.receiveShadow = true;
+  m.renderOrder = 2;
   scene.add(m);
 }
 
@@ -3486,20 +3382,28 @@ function makePropertyMesh(p) {
 
   // ── Front yard (lighter ground) ──
   const yardGeo = new THREE.PlaneGeometry(p.w + 8, p.d + 8);
-  const yardMat = new THREE.MeshLambertMaterial({ color: isMansion ? 0xc8d8a8 : 0xa8c890 });
+  const yardMat = new THREE.MeshLambertMaterial({
+    color: isMansion ? 0xc8d8a8 : 0xa8c890,
+    polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3,
+  });
   const yard = new THREE.Mesh(yardGeo, yardMat);
   yard.rotation.x = -Math.PI/2;
-  yard.position.set(0, 0.02, 0);
+  yard.position.set(0, 0.10, 0);
   yard.receiveShadow = true;
+  yard.renderOrder = 3;
   g.add(yard);
 
   // ── Driveway (gravel/concrete strip to entrance) ──
   const drive = new THREE.Mesh(
     new THREE.PlaneGeometry(p.w * 0.35, p.d/2 + 4),
-    new THREE.MeshLambertMaterial({ color: 0x666666 })
+    new THREE.MeshLambertMaterial({
+      color: 0x666666,
+      polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+    })
   );
   drive.rotation.x = -Math.PI/2;
-  drive.position.set(0, 0.04, p.d/2 + 2);
+  drive.position.set(0, 0.13, p.d/2 + 2);
+  drive.renderOrder = 4;
   g.add(drive);
 
   // ── Foundation (slightly larger base, dark) ──
