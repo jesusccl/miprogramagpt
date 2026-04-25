@@ -25,6 +25,60 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   text-shadow:2px 2px 0 #000;
 }
 
+#money-tag {
+  position:absolute; top:40px; right:130px;
+  color:#7fff7f; font-size:15px; font-weight:800;
+  text-shadow:2px 2px 0 #000, 0 0 8px rgba(60,255,60,0.4);
+  letter-spacing:0.5px;
+}
+
+/* Property prompt (when standing on a portal) */
+#property-prompt {
+  position:fixed; bottom:130px; left:50%; transform:translateX(-50%);
+  background:linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(20,30,40,0.85) 100%);
+  border:2px solid #FFD700; border-radius:10px;
+  padding:14px 22px; min-width:280px; max-width:90vw;
+  text-align:center; color:#fff; z-index:60;
+  box-shadow:0 0 30px rgba(255,215,0,0.4);
+  display:none;
+}
+#property-prompt .pp-title {
+  font-size:16px; font-weight:900; color:#FFD700;
+  letter-spacing:1px; margin-bottom:4px;
+}
+#property-prompt .pp-price {
+  font-size:22px; font-weight:900; color:#7fff7f;
+  margin:6px 0;
+}
+#property-prompt .pp-status {
+  font-size:12px; color:#bbb; margin-bottom:8px;
+}
+#property-prompt .pp-action {
+  font-size:13px; color:#fff;
+  background:rgba(255,215,0,0.2);
+  border:1px solid #FFD700;
+  border-radius:6px; padding:5px 12px;
+  display:inline-block; margin-top:4px;
+  font-weight:700;
+}
+#property-prompt.owned { border-color:#7fff7f; box-shadow:0 0 30px rgba(127,255,127,0.4); }
+#property-prompt.owned .pp-title { color:#7fff7f; }
+#property-prompt.cant-afford .pp-action { color:#ff6666; border-color:#ff6666; background:rgba(255,100,100,0.15); }
+
+/* Property purchase toast */
+#purchase-toast {
+  position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+  background:linear-gradient(135deg, rgba(0,80,0,0.95), rgba(0,40,0,0.95));
+  border:2px solid #7fff7f; border-radius:14px;
+  padding:24px 40px; color:#fff; text-align:center;
+  z-index:200; pointer-events:none; opacity:0;
+  box-shadow:0 0 60px rgba(127,255,127,0.6);
+  transition:opacity 0.3s;
+}
+#purchase-toast.show { opacity:1; }
+#purchase-toast .pt-title { font-size:24px; font-weight:900; color:#7fff7f; margin-bottom:8px; }
+#purchase-toast .pt-name { font-size:18px; font-weight:700; }
+
 #wanted-wrap {
   position:absolute; top:44px; right:16px;
   display:flex; flex-direction:column; align-items:flex-end; gap:2px;
@@ -319,6 +373,13 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
     right:auto;
     font-size:12px;
   }
+  /* Money under score */
+  #money-tag {
+    top: calc(46px + env(safe-area-inset-top, 0px));
+    left: calc(10px + env(safe-area-inset-left, 0px));
+    right:auto;
+    font-size:12px;
+  }
   /* Wanted stars smaller, pinned top-right */
   #wanted-wrap {
     top: calc(8px + env(safe-area-inset-top, 0px));
@@ -429,6 +490,7 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
 <div id="hud">
   <div id="name-tag">⚡ AUGUSTO</div>
   <div id="score-tag">PUNTOS: <span id="score-val">0</span></div>
+  <div id="money-tag">💵 $<span id="money-val">500</span></div>
   <div id="wanted-wrap">
     <div id="wanted-label">SE BUSCA</div>
     <div id="wanted-stars">☆☆☆☆☆</div>
@@ -475,6 +537,20 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
 <!-- Damage flash -->
 <div id="dmg-flash"></div>
 
+<!-- Property prompt (shown near a property portal) -->
+<div id="property-prompt">
+  <div class="pp-title" id="pp-title">CASA</div>
+  <div class="pp-status" id="pp-status">A la venta</div>
+  <div class="pp-price" id="pp-price">$0</div>
+  <div class="pp-action" id="pp-action">Pulsa <b>B</b> para comprar</div>
+</div>
+
+<!-- Property purchase toast -->
+<div id="purchase-toast">
+  <div class="pt-title">🏡 ¡PROPIEDAD COMPRADA!</div>
+  <div class="pt-name" id="pt-name"></div>
+</div>
+
 <!-- Start Screen -->
 <div id="start-screen">
   <div class="start-title">AUGUSTO CITY</div>
@@ -516,7 +592,7 @@ let renderer, scene, camera, clock;
 let gameRunning = false;
 let playerDead = false;
 
-const WORLD = 180; // world half-size
+const WORLD = 450; // world half-size (ampliado 2.5×)
 const MAP_SCALE = 110 / (WORLD * 2);
 
 // ─── Input ───
@@ -532,11 +608,13 @@ const pState = {
   weapon:  null,    // 'pistol'|'rifle'|'shotgun'
   ammo:    0,
   score:   0,
+  money:   500,     // starting cash
   wanted:  0,
   wantedT: 0,
   shootCooldown: 0,
   sprint:  false,
-  alive:   true
+  alive:   true,
+  inMansion: false  // true while inside mansion interior
 };
 
 // ─── Camera orbit ───
@@ -581,12 +659,34 @@ function init() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setClearColor(0x87CEEB);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
 
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x87CEEB, 0.013);
+  // Bigger world → less aggressive fog, blue tint for atmosphere
+  scene.fog = new THREE.FogExp2(0xa8c8e8, 0.0035);
 
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 600);
+  // Build a vertical-gradient sky (sphere with shader-like material)
+  const skyGeo = new THREE.SphereGeometry(900, 32, 16);
+  const skyCanvas = document.createElement('canvas');
+  skyCanvas.width = 64; skyCanvas.height = 256;
+  const sctx = skyCanvas.getContext('2d');
+  const grad = sctx.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0,   '#1a3960');  // zenith
+  grad.addColorStop(0.4, '#5a8ec8');
+  grad.addColorStop(0.7, '#a8c8e8');
+  grad.addColorStop(1,   '#e8d8b0');  // horizon warm
+  sctx.fillStyle = grad;
+  sctx.fillRect(0, 0, 64, 256);
+  const skyTex = new THREE.CanvasTexture(skyCanvas);
+  const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false });
+  const sky = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(sky);
+
+  renderer.setClearColor(0xa8c8e8);
+
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1500);
   clock  = new THREE.Clock(false);
 
   buildLights();
@@ -615,19 +715,24 @@ function init() {
    LIGHTING
 ═══════════════════════════════════════════════════ */
 function buildLights() {
-  scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-  const sun = new THREE.DirectionalLight(0xFFF8E0, 1.1);
+  const sun = new THREE.DirectionalLight(0xfff0d8, 1.2);
   sun.position.set(60, 100, 40);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.bias = -0.0002;
   const sc = sun.shadow.camera;
-  sc.near = 1; sc.far = 350;
-  sc.left = sc.bottom = -130;
-  sc.right = sc.top = 130;
+  sc.near = 1; sc.far = 280;
+  sc.left = sc.bottom = -75;
+  sc.right = sc.top = 75;
   scene.add(sun);
+  scene.add(sun.target);
+  // Save reference for player-tracking shadows
+  window.__sunLight = sun;
 
-  scene.add(new THREE.HemisphereLight(0x87CEEB, 0x4a3520, 0.35));
+  // Sky/ground hemisphere
+  scene.add(new THREE.HemisphereLight(0x87CEEB, 0x4a3520, 0.45));
 }
 
 /* ═══════════════════════════════════════════════════
@@ -779,7 +884,7 @@ function buildWorld() {
   // Ground (grass)
   const gTex = TEX.grass.clone();
   gTex.needsUpdate = true;
-  gTex.repeat.set(60, 60);
+  gTex.repeat.set(150, 150);
   gTex.wrapS = gTex.wrapT = THREE.RepeatWrapping;
   const gGeo = new THREE.PlaneGeometry(WORLD*2, WORLD*2);
   const gMat = new THREE.MeshLambertMaterial({ map: gTex });
@@ -787,103 +892,129 @@ function buildWorld() {
   gnd.rotation.x = -Math.PI/2; gnd.receiveShadow = true;
   scene.add(gnd);
 
-  // Main roads
-  makeRoad(0, 0, WORLD*2, 16, true);   // horizontal main
-  makeRoad(0, 0, WORLD*2, 16, false);  // vertical main
-  makeRoad(0,  50, WORLD*2, 10, true);
-  makeRoad(0, -50, WORLD*2, 10, true);
-  makeRoad( 50, 0, 10, WORLD*2, true);
-  makeRoad(-50, 0, 10, WORLD*2, true);
+  // ─── Procedural road grid ───
+  // Main avenues every 100 units, secondary every 50
+  const GRID_STEP = 100;
+  for (let x = -WORLD; x <= WORLD; x += GRID_STEP) {
+    makeRoad(x, 0, 12, WORLD*2, false);
+  }
+  for (let z = -WORLD; z <= WORLD; z += GRID_STEP) {
+    makeRoad(0, z, WORLD*2, 12, true);
+  }
+  // Secondary roads (narrower)
+  for (let x = -WORLD + 50; x < WORLD; x += GRID_STEP) {
+    makeRoad(x, 0, 8, WORLD*2, false);
+  }
+  for (let z = -WORLD + 50; z < WORLD; z += GRID_STEP) {
+    makeRoad(0, z, WORLD*2, 8, true);
+  }
 
-  // Sidewalks
-  makeSidewalk( 12, 0, WORLD*2, 4);
-  makeSidewalk(-12, 0, WORLD*2, 4);
-  makeSidewalk(0,  12, 4, WORLD*2);
-  makeSidewalk(0, -12, 4, WORLD*2);
+  // Sidewalks along main avenues only
+  for (let x = -WORLD; x <= WORLD; x += GRID_STEP) {
+    makeSidewalk(x + 9, 0, 3, WORLD*2);
+    makeSidewalk(x - 9, 0, 3, WORLD*2);
+  }
+  for (let z = -WORLD; z <= WORLD; z += GRID_STEP) {
+    makeSidewalk(0, z + 9, WORLD*2, 3);
+    makeSidewalk(0, z - 9, WORLD*2, 3);
+  }
 
-  // ─── Buildings ───
-  const BD = [
-    // NE block
-    { x: 65, z:-65, w:22, d:22, h:28, c:0x5D4037 },
-    { x: 80, z:-55, w:12, d:18, h:40, c:0x455A64 },
-    { x: 58, z:-80, w:14, d:12, h:20, c:0x795548 },
-    { x: 78, z:-80, w:18, d:12, h:16, c:0x9E9E9E },
-    // NW block
-    { x:-65, z:-65, w:22, d:22, h:34, c:0x37474F },
-    { x:-80, z:-55, w:12, d:28, h:44, c:0x2E7D32 },
-    { x:-60, z:-80, w:20, d:12, h:18, c:0xBF360C },
-    // SE block
-    { x: 65, z: 65, w:24, d:20, h:26, c:0x4A148C },
-    { x: 58, z: 80, w:14, d:12, h:30, c:0x1565C0 },
-    { x: 82, z: 68, w:12, d:20, h:36, c:0x263238 },
-    // SW block
-    { x:-65, z: 65, w:18, d:22, h:28, c:0xAD1457 },
-    { x:-80, z: 58, w:12, d:16, h:22, c:0x00695C },
-    { x:-63, z: 82, w:22, d:12, h:35, c:0x4E342E },
-    // Mid-ring
-    { x: 28, z:-28, w:14, d:14, h:50, c:0x1A237E },
-    { x:-28, z:-28, w:14, d:14, h:42, c:0x212121 },
-    { x: 28, z: 28, w:14, d:14, h:32, c:0x33691E },
-    { x:-28, z: 28, w:14, d:14, h:46, c:0x3E2723 },
-    // Outer perimeter
-    { x: 90, z:  0, w:12, d:32, h:16, c:0x827717 },
-    { x:-90, z:  0, w:12, d:32, h:16, c:0x004D40 },
-    { x:  0, z: 90, w:32, d:12, h:16, c:0x880E4F },
-    { x:  0, z:-90, w:32, d:12, h:16, c:0x1B5E20 },
-    // Corner towers
-    { x:110, z:-110, w:18, d:18, h:60, c:0x37474F },
-    { x:-110,z:-110, w:18, d:18, h:55, c:0x1A237E },
-    { x:110, z: 110, w:18, d:18, h:52, c:0x4A148C },
-    { x:-110,z: 110, w:18, d:18, h:58, c:0xAD1457 },
+  // ─── Procedural buildings ───
+  // For each block (between main avenues), drop 4-8 buildings avoiding roads
+  const palette = [
+    0x5D4037, 0x455A64, 0x795548, 0x9E9E9E, 0x37474F, 0x2E7D32,
+    0xBF360C, 0x4A148C, 0x1565C0, 0x263238, 0xAD1457, 0x00695C,
+    0x4E342E, 0x1A237E, 0x212121, 0x33691E, 0x3E2723, 0x827717,
+    0x004D40, 0x880E4F, 0x1B5E20, 0xC62828, 0x6A1B9A, 0xE65100,
   ];
-  BD.forEach(b => makeBuilding(b.x, b.z, b.w, b.d, b.h, b.c));
+  const isOnRoad = (x, z, w, d) => {
+    // Check if box overlaps a road grid line
+    const half = 9; // road half-width worst case
+    for (let rx = -WORLD; rx <= WORLD; rx += 50) {
+      if (Math.abs(x - rx) < (w/2 + half + 4)) return true;
+    }
+    for (let rz = -WORLD; rz <= WORLD; rz += 50) {
+      if (Math.abs(z - rz) < (d/2 + half + 4)) return true;
+    }
+    return false;
+  };
+  const occupied = []; // {x,z,w,d}
+  const overlapsOccupied = (x, z, w, d) => {
+    for (const o of occupied) {
+      if (Math.abs(x - o.x) < (w/2 + o.w/2 + 3) &&
+          Math.abs(z - o.z) < (d/2 + o.d/2 + 3)) return true;
+    }
+    return false;
+  };
 
-  // Trees
-  const TREES = [
-    [10,-8],[-10,-8],[10,8],[-10,8],
-    [42,25],[-42,25],[42,-25],[-42,-25],
-    [25,42],[-25,42],[25,-42],[-25,-42],
-    [35,8],[-35,8],[35,-8],[-35,-8],
-    [8,35],[-8,35],[8,-35],[-8,-35],
-  ];
-  TREES.forEach(([x,z]) => makeTree(x, z));
+  let placed = 0, attempts = 0;
+  const TARGET_BUILDINGS = 140;
+  while (placed < TARGET_BUILDINGS && attempts < 1500) {
+    attempts++;
+    const w = 12 + Math.floor(Math.random() * 14);
+    const d = 12 + Math.floor(Math.random() * 14);
+    const h = 14 + Math.floor(Math.random() * 50);
+    const x = Math.round((Math.random() - 0.5) * (WORLD*2 - 40));
+    const z = Math.round((Math.random() - 0.5) * (WORLD*2 - 40));
+    if (isOnRoad(x, z, w, d)) continue;
+    if (overlapsOccupied(x, z, w, d)) continue;
+    const c = palette[Math.floor(Math.random() * palette.length)];
+    makeBuilding(x, z, w, d, h, c);
+    occupied.push({ x, z, w, d });
+    placed++;
+  }
 
-  // Street lamps
-  const LAMPS = [
-    [10,10],[-10,10],[10,-10],[-10,-10],
-    [36,10],[-36,10],[36,-10],[-36,-10],
-    [10,36],[-10,36],[10,-36],[-10,-36],
-  ];
-  LAMPS.forEach(([x,z]) => makeLamp(x, z));
+  // ─── Trees scattered ───
+  let treesPlaced = 0;
+  for (let i = 0; i < 600 && treesPlaced < 220; i++) {
+    const x = (Math.random() - 0.5) * (WORLD*2 - 30);
+    const z = (Math.random() - 0.5) * (WORLD*2 - 30);
+    if (isOnRoad(x, z, 2, 2)) continue;
+    if (overlapsOccupied(x, z, 2, 2)) continue;
+    makeTree(x, z);
+    treesPlaced++;
+  }
 
-  // ─── Parked vehicles ───
-  // Cars placed along the main roads, outside the road lanes
-  const CARS = [
-    // Horizontal road (z near 0): park on sides (outside road ±8)
-    { x: 25,  z: 14.5, rot: 0,           color:0xB71C1C, type:'sedan'  },
-    { x: -30, z: 14.5, rot: 0,           color:0x1565C0, type:'sedan'  },
-    { x: 45,  z:-14.5, rot: Math.PI,     color:0xF9A825, type:'taxi'   },
-    { x:-50,  z:-14.5, rot: Math.PI,     color:0x2E7D32, type:'sedan'  },
-    { x: 20,  z: 47.5, rot: 0,           color:0x6A1B9A, type:'sedan'  },
-    { x:-25,  z: 47.5, rot: 0,           color:0xE65100, type:'sedan'  },
-    { x: 55,  z:-47.5, rot: Math.PI,     color:0x37474F, type:'truck'  },
-    { x:-55,  z: 47.5, rot: 0,           color:0xC62828, type:'truck'  },
-    { x: 65,  z: 14.5, rot: 0,           color:0x00838F, type:'sedan'  },
-    { x:-70,  z:-14.5, rot: Math.PI,     color:0xFFEB3B, type:'taxi'   },
-    // Vertical road (x near 0)
-    { x: 14.5, z: 30,  rot: Math.PI/2,   color:0x4A148C, type:'sedan'  },
-    { x:-14.5, z:-30,  rot: -Math.PI/2,  color:0x795548, type:'sedan'  },
-    { x: 14.5, z:-55,  rot: Math.PI/2,   color:0x388E3C, type:'truck'  },
-    { x:-14.5, z: 55,  rot: -Math.PI/2,  color:0x9E9E9E, type:'sedan'  },
-    { x: 14.5, z: 75,  rot: Math.PI/2,   color:0xAD1457, type:'sedan'  },
-    { x:-14.5, z:-75,  rot: -Math.PI/2,  color:0x3E2723, type:'truck'  },
-    // Cars on the 50-offset road
-    { x: 60, z: 55.5, rot: 0, color:0xF57C00, type:'sedan' },
-    { x:-40, z: 55.5, rot: 0, color:0x1A237E, type:'taxi'  },
-    { x: 30, z:-55.5, rot: Math.PI, color:0x004D40, type:'sedan' },
-    { x:-65, z:-55.5, rot: Math.PI, color:0xB71C1C, type:'sedan' },
-  ];
-  CARS.forEach(c => makeVehicle(c.x, c.z, c.rot, c.color, c.type));
+  // ─── Street lamps along main avenues ───
+  for (let x = -WORLD + 50; x < WORLD; x += 50) {
+    for (let z = -WORLD + 50; z < WORLD; z += 100) {
+      if (Math.abs(x) > 4 && Math.abs(z) > 4) makeLamp(x + 11, z);
+    }
+  }
+
+  // ─── Parked vehicles (procedural) ───
+  const carColors = [0xB71C1C, 0x1565C0, 0xF9A825, 0x2E7D32, 0x6A1B9A,
+                     0xE65100, 0x37474F, 0xC62828, 0x00838F, 0xFFEB3B,
+                     0x4A148C, 0x795548, 0x388E3C, 0x9E9E9E, 0xAD1457,
+                     0x3E2723, 0xF57C00, 0x1A237E, 0x004D40];
+  const carTypes  = ['sedan','sedan','sedan','sport','suv','taxi','truck'];
+  const placedCars = new Set();
+  for (let avenueZ = -WORLD + 50; avenueZ < WORLD; avenueZ += 100) {
+    for (let x = -WORLD + 30; x < WORLD - 20; x += 22) {
+      if (Math.random() < 0.45) continue;
+      const offset = Math.random() < 0.5 ? 14.5 : -14.5;
+      const rot = offset > 0 ? 0 : Math.PI;
+      const key = `${Math.round(x/4)}_${avenueZ + offset}`;
+      if (placedCars.has(key)) continue;
+      placedCars.add(key);
+      const color = carColors[Math.floor(Math.random() * carColors.length)];
+      const type  = carTypes[Math.floor(Math.random() * carTypes.length)];
+      makeVehicle(x, avenueZ + offset, rot, color, type);
+    }
+  }
+  for (let avenueX = -WORLD + 50; avenueX < WORLD; avenueX += 100) {
+    for (let z = -WORLD + 30; z < WORLD - 20; z += 22) {
+      if (Math.random() < 0.55) continue;
+      const offset = Math.random() < 0.5 ? 14.5 : -14.5;
+      const rot = offset > 0 ? -Math.PI/2 : Math.PI/2;
+      const color = carColors[Math.floor(Math.random() * carColors.length)];
+      const type  = carTypes[Math.floor(Math.random() * carTypes.length)];
+      makeVehicle(avenueX + offset, z, rot, color, type);
+    }
+  }
+
+  // ─── Properties (real-estate system) ───
+  if (typeof spawnProperties === 'function') spawnProperties(occupied);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -894,125 +1025,268 @@ function makeVehicle(x, z, rot, color, type) {
 
   const isTruck = type === 'truck';
   const isTaxi  = type === 'taxi';
+  const isSport = type === 'sport';
+  const isSUV   = type === 'suv';
 
-  const bodyL = isTruck ? 5.2 : 4.2;
-  const bodyW = isTruck ? 2.2 : 1.9;
-  const bodyH = 0.7;
+  // Profile per type — sport is low+wide, suv tall, truck big, sedan default
+  let bodyL, bodyW, bodyH, hoodL, trunkL, cabinL, cabinH, beltline;
+  if (isSport)      { bodyL=4.4; bodyW=1.95; bodyH=0.55; hoodL=1.4; trunkL=1.2; cabinL=1.6; cabinH=0.55; beltline=0.65; }
+  else if (isSUV)   { bodyL=4.6; bodyW=2.05; bodyH=0.85; hoodL=1.3; trunkL=1.0; cabinL=2.1; cabinH=0.95; beltline=0.55; }
+  else if (isTruck) { bodyL=5.4; bodyW=2.2;  bodyH=0.85; hoodL=1.5; trunkL=2.6; cabinL=1.6; cabinH=1.0;  beltline=0.55; }
+  else              { bodyL=4.4; bodyW=1.95; bodyH=0.7;  hoodL=1.3; trunkL=1.1; cabinL=1.85;cabinH=0.7;  beltline=0.6; }
 
-  // Main chassis
-  const bodyMat = new THREE.MeshLambertMaterial({ color });
-  const body = new THREE.Mesh(
+  const bodyMat   = new THREE.MeshPhongMaterial({ color, shininess:60, specular:0x222222 });
+  const trimMat   = new THREE.MeshPhongMaterial({ color:0x111111, shininess:30 });
+  const winMat    = new THREE.MeshPhongMaterial({ color:0x0d1820, shininess:120, specular:0x4488aa });
+  const groundY   = 0.45; // chassis baseline (above wheels)
+
+  // ── Main chassis (lower body) ──
+  const chassis = new THREE.Mesh(
     new THREE.BoxGeometry(bodyL, bodyH, bodyW),
     bodyMat
   );
-  body.position.y = 0.5;
-  body.castShadow = body.receiveShadow = true;
-  g.add(body);
+  chassis.position.y = groundY + bodyH/2;
+  chassis.castShadow = chassis.receiveShadow = true;
+  g.add(chassis);
 
-  // Cabin / roof
-  const cabinL = isTruck ? 2 : 2.2;
-  const cabinH = 0.7;
-  const cabinW = bodyW * 0.92;
-  const cabinXOff = isTruck ? -0.8 : 0;
+  // ── Lower side trim (black sill) ──
+  [-1, 1].forEach(side => {
+    const sill = new THREE.Mesh(
+      new THREE.BoxGeometry(bodyL*0.94, 0.18, 0.08),
+      trimMat
+    );
+    sill.position.set(0, groundY + 0.1, side*bodyW/2);
+    g.add(sill);
+  });
 
-  const cabin = new THREE.Mesh(
-    new THREE.BoxGeometry(cabinL, cabinH, cabinW),
+  // ── Hood ── (slightly lower than chassis top for shape definition)
+  const hoodH = isSport ? 0.18 : 0.22;
+  const hood = new THREE.Mesh(
+    new THREE.BoxGeometry(hoodL, hoodH, bodyW*0.96),
     bodyMat
   );
-  cabin.position.set(cabinXOff, 0.5 + bodyH/2 + cabinH/2, 0);
+  hood.position.set(bodyL/2 - hoodL/2, groundY + bodyH + hoodH/2, 0);
+  hood.castShadow = true;
+  g.add(hood);
+
+  // ── Trunk ── (only sedan/sport — truck has cargo bed instead)
+  if (!isTruck) {
+    const trunkH = isSport ? 0.16 : 0.20;
+    const trunk = new THREE.Mesh(
+      new THREE.BoxGeometry(trunkL, trunkH, bodyW*0.96),
+      bodyMat
+    );
+    trunk.position.set(-bodyL/2 + trunkL/2, groundY + bodyH + trunkH/2, 0);
+    trunk.castShadow = true;
+    g.add(trunk);
+  }
+
+  // ── Cabin (roof) ── lower for sport, tall for suv/truck
+  const cabinXOff = isTruck ? -bodyL*0.05 : 0;
+  const cabin = new THREE.Mesh(
+    new THREE.BoxGeometry(cabinL, cabinH, bodyW*0.93),
+    bodyMat
+  );
+  cabin.position.set(cabinXOff, groundY + bodyH + cabinH/2, 0);
   cabin.castShadow = true;
   g.add(cabin);
 
-  // Truck cargo (if truck)
-  if (isTruck) {
-    const cargo = new THREE.Mesh(
-      new THREE.BoxGeometry(2.6, 1.4, bodyW*0.95),
-      new THREE.MeshLambertMaterial({ color:0x8d6e63 })
-    );
-    cargo.position.set(1.2, 0.5 + bodyH/2 + 0.7, 0);
-    cargo.castShadow = true;
-    g.add(cargo);
-  }
-
-  // Windows (dark blue tinted)
-  const winMat = new THREE.MeshPhongMaterial({ color:0x1a2a3a, shininess:80 });
-  // Front window (slanted slightly would be ideal — simple box works)
-  const frontW = new THREE.Mesh(
-    new THREE.BoxGeometry(0.05, cabinH*0.8, cabinW*0.9),
+  // ── Slanted windshield (front) ──
+  const wsThickness = 0.04;
+  const ws = new THREE.Mesh(
+    new THREE.PlaneGeometry(bodyW*0.88, cabinH*1.05),
     winMat
   );
-  frontW.position.set(cabinXOff + cabinL/2 + 0.02, 0.5 + bodyH/2 + cabinH/2, 0);
-  g.add(frontW);
+  ws.rotation.y = -Math.PI/2;
+  ws.rotation.x = -0.32; // slant
+  ws.position.set(cabinXOff + cabinL/2 + 0.1, groundY + bodyH + cabinH*0.5, 0);
+  g.add(ws);
 
-  // Rear window
-  const rearW = frontW.clone();
-  rearW.position.x = cabinXOff - cabinL/2 - 0.02;
-  g.add(rearW);
+  // ── Slanted rear window ──
+  const rw = new THREE.Mesh(
+    new THREE.PlaneGeometry(bodyW*0.88, cabinH*0.95),
+    winMat
+  );
+  rw.rotation.y = Math.PI/2;
+  rw.rotation.x = 0.30;
+  rw.position.set(cabinXOff - cabinL/2 - 0.1, groundY + bodyH + cabinH*0.5, 0);
+  g.add(rw);
 
-  // Side windows
+  // ── Side windows ──
   [-1, 1].forEach(side => {
     const sw = new THREE.Mesh(
-      new THREE.BoxGeometry(cabinL*0.9, cabinH*0.65, 0.05),
+      new THREE.BoxGeometry(cabinL*0.85, cabinH*0.7, 0.04),
       winMat
     );
-    sw.position.set(cabinXOff, 0.5 + bodyH/2 + cabinH*0.55, side*cabinW/2);
+    sw.position.set(cabinXOff, groundY + bodyH + cabinH*0.6, side*bodyW*0.47);
     g.add(sw);
   });
 
-  // Wheels
-  const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.3, 12);
-  const wheelMat = new THREE.MeshLambertMaterial({ color:0x111111 });
-  const wheelPos = isTruck
-    ? [[-1.6,-1], [-1.6,1], [1.6,-1], [1.6,1]]
-    : [[-1.3,-1], [-1.3,1], [1.3,-1], [1.3,1]];
-  const wheelRefs = [];
-  wheelPos.forEach(([wx, wsign]) => {
-    const w = new THREE.Mesh(wheelGeo, wheelMat);
-    w.position.set(wx, 0.38, wsign * bodyW/2);
-    w.rotation.x = Math.PI/2;
-    w.castShadow = true;
-    g.add(w);
-    wheelRefs.push(w);
-
-    // Rim
-    const rim = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.22, 0.22, 0.32, 8),
-      new THREE.MeshLambertMaterial({ color:0xbbbbbb })
+  // ── Truck cargo bed ──
+  if (isTruck) {
+    const bedH = 0.6;
+    const bed = new THREE.Mesh(
+      new THREE.BoxGeometry(2.5, bedH, bodyW*0.96),
+      new THREE.MeshPhongMaterial({ color:0x4a2c1c, shininess:10 })
     );
-    rim.position.copy(w.position);
-    rim.rotation.x = Math.PI/2;
-    g.add(rim);
-    wheelRefs.push(rim);
-  });
+    bed.position.set(-bodyL/2 + 1.5, groundY + bodyH + bedH/2, 0);
+    bed.castShadow = true;
+    g.add(bed);
+    // Bed walls
+    [-1, 1].forEach(side => {
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(2.5, 0.5, 0.08),
+        new THREE.MeshPhongMaterial({ color:0x3a2014 })
+      );
+      wall.position.set(-bodyL/2 + 1.5, groundY + bodyH + bedH + 0.25, side*bodyW*0.46);
+      g.add(wall);
+    });
+  }
 
-  // Headlights
-  [-1,1].forEach(side => {
-    const hl = new THREE.Mesh(
-      new THREE.BoxGeometry(0.15, 0.2, 0.3),
+  // ── Front grille ──
+  const grille = new THREE.Mesh(
+    new THREE.BoxGeometry(0.05, bodyH*0.55, bodyW*0.65),
+    new THREE.MeshPhongMaterial({ color:0x222222, shininess:80 })
+  );
+  grille.position.set(bodyL/2 + 0.02, groundY + bodyH*0.45, 0);
+  g.add(grille);
+
+  // ── Front bumper ──
+  const fbump = new THREE.Mesh(
+    new THREE.BoxGeometry(0.15, 0.18, bodyW*0.95),
+    trimMat
+  );
+  fbump.position.set(bodyL/2 + 0.05, groundY + 0.12, 0);
+  g.add(fbump);
+
+  // ── Rear bumper ──
+  const rbump = fbump.clone();
+  rbump.position.x = -bodyL/2 - 0.05;
+  g.add(rbump);
+
+  // ── Headlights (with chrome housing) ──
+  [-1, 1].forEach(side => {
+    const housing = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.22, 0.42),
+      new THREE.MeshPhongMaterial({ color:0xdddddd, shininess:120 })
+    );
+    housing.position.set(bodyL/2 - 0.04, groundY + bodyH*0.55, side*bodyW*0.35);
+    g.add(housing);
+    const lens = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 0.18, 0.36),
       new THREE.MeshBasicMaterial({ color:0xFFFDE7 })
     );
-    hl.position.set(bodyL/2-0.05, 0.55, side*bodyW*0.35);
-    g.add(hl);
+    lens.position.set(bodyL/2 + 0.01, groundY + bodyH*0.55, side*bodyW*0.35);
+    g.add(lens);
   });
 
-  // Taillights
-  [-1,1].forEach(side => {
+  // ── Taillights ──
+  [-1, 1].forEach(side => {
     const tl = new THREE.Mesh(
-      new THREE.BoxGeometry(0.12, 0.18, 0.25),
-      new THREE.MeshBasicMaterial({ color:0xff2222 })
+      new THREE.BoxGeometry(0.06, 0.15, 0.38),
+      new THREE.MeshBasicMaterial({ color:0xcc1111 })
     );
-    tl.position.set(-bodyL/2+0.05, 0.55, side*bodyW*0.35);
+    tl.position.set(-bodyL/2 - 0.01, groundY + bodyH*0.6, side*bodyW*0.35);
     g.add(tl);
   });
 
-  // Taxi sign on top
+  // ── Side mirrors ──
+  [-1, 1].forEach(side => {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.12, 0.1),
+      bodyMat
+    );
+    m.position.set(cabinXOff + cabinL/2 - 0.1, groundY + bodyH + cabinH*0.45, side*(bodyW*0.5 + 0.1));
+    g.add(m);
+  });
+
+  // ── Door lines (purely cosmetic dark seams) ──
+  [-1, 1].forEach(side => {
+    const door = new THREE.Mesh(
+      new THREE.BoxGeometry(0.02, bodyH*0.7, 0.02),
+      trimMat
+    );
+    door.position.set(cabinXOff - cabinL*0.1, groundY + bodyH*0.55, side*bodyW/2 + (side*0.005));
+    g.add(door);
+  });
+
+  // ── Wheels ── proper tires + visible rims with spokes
+  const wheelRadius = isSUV ? 0.46 : isTruck ? 0.5 : isSport ? 0.42 : 0.4;
+  const tireGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 0.32, 18);
+  const tireMat = new THREE.MeshLambertMaterial({ color:0x0a0a0a });
+  const rimGeo  = new THREE.CylinderGeometry(wheelRadius*0.62, wheelRadius*0.62, 0.34, 12);
+  const rimMat  = new THREE.MeshPhongMaterial({ color:0xc8c8c8, shininess:120, specular:0x666666 });
+  const hubGeo  = new THREE.CylinderGeometry(wheelRadius*0.18, wheelRadius*0.18, 0.36, 8);
+  const hubMat  = new THREE.MeshPhongMaterial({ color:0x888888, shininess:80 });
+
+  const wheelXs = isTruck
+    ? [bodyL*0.32, -bodyL*0.32]
+    : isSUV
+      ? [bodyL*0.34, -bodyL*0.32]
+      : [bodyL*0.32, -bodyL*0.32];
+  const wheelRefs = [];
+  wheelXs.forEach(wx => {
+    [-1, 1].forEach(side => {
+      const tire = new THREE.Mesh(tireGeo, tireMat);
+      tire.position.set(wx, wheelRadius, side*bodyW/2);
+      tire.rotation.x = Math.PI/2;
+      tire.castShadow = true;
+      g.add(tire);
+      wheelRefs.push(tire);
+
+      const rim = new THREE.Mesh(rimGeo, rimMat);
+      rim.position.copy(tire.position);
+      rim.rotation.x = Math.PI/2;
+      g.add(rim);
+      wheelRefs.push(rim);
+
+      const hub = new THREE.Mesh(hubGeo, hubMat);
+      hub.position.copy(tire.position);
+      hub.rotation.x = Math.PI/2;
+      g.add(hub);
+
+      // Wheel arch (fender) - dark cover above wheel
+      const arch = new THREE.Mesh(
+        new THREE.BoxGeometry(wheelRadius*2.4, 0.1, 0.4),
+        trimMat
+      );
+      arch.position.set(wx, wheelRadius + 0.18, side*bodyW/2);
+      g.add(arch);
+    });
+  });
+
+  // ── Taxi sign / spoiler ──
   if (isTaxi) {
     const sign = new THREE.Mesh(
-      new THREE.BoxGeometry(0.8, 0.25, 0.4),
+      new THREE.BoxGeometry(0.9, 0.28, 0.45),
       new THREE.MeshBasicMaterial({ color:0xFFD700 })
     );
-    sign.position.set(0, 0.5 + bodyH/2 + cabinH + 0.15, 0);
+    sign.position.set(0, groundY + bodyH + cabinH + 0.16, 0);
     g.add(sign);
+    // "TAXI" text via emissive plane (small)
+    const txt = new THREE.Mesh(
+      new THREE.BoxGeometry(0.92, 0.18, 0.02),
+      new THREE.MeshBasicMaterial({ color:0x000000 })
+    );
+    txt.position.set(0, groundY + bodyH + cabinH + 0.16, 0.24);
+    g.add(txt);
+  }
+  if (isSport) {
+    const spoiler = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.12, bodyW*0.8),
+      bodyMat
+    );
+    spoiler.position.set(-bodyL/2 + 0.1, groundY + bodyH + 0.32, 0);
+    g.add(spoiler);
+    // Spoiler stems
+    [-1, 1].forEach(side => {
+      const stem = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.2, 0.08),
+        trimMat
+      );
+      stem.position.set(-bodyL/2 + 0.1, groundY + bodyH + 0.22, side*bodyW*0.32);
+      g.add(stem);
+    });
   }
 
   g.position.set(x, 0, z);
@@ -2019,12 +2293,14 @@ function killEnemy(en) {
   en.alive  = false;
   en.deadT  = 0;
   pState.score += en.isBoss ? 500 : 100;
+  pState.money += en.isBoss ? 800 : 80;
   pState.wanted = Math.min(5, pState.wanted+1);
   pState.wantedT = 30;
   en.group.rotation.z = Math.PI/2;
   en.group.position.y = -0.5;
-  addFeed(en.isBoss ? '👑 ¡JEFE DERROTADO!  +500' : '💀 Enemigo eliminado  +100');
+  addFeed(en.isBoss ? '👑 ¡JEFE!  +500 pts +$800' : '💀 Enemigo  +100 pts +$80');
   document.getElementById('score-val').textContent = pState.score;
+  updateMoney();
   updateWanted();
   onEnemyKilled(en);
 
@@ -2352,6 +2628,14 @@ function updateCamera() {
 
   camera.position.lerp(new THREE.Vector3(tx,ty,tz), 0.12);
   camera.lookAt(pState.pos.x, pState.pos.y+1.2, pState.pos.z);
+
+  // Sun shadow follows the player so we get crisp shadows everywhere
+  if (window.__sunLight) {
+    const px = pState.pos.x, pz = pState.pos.z;
+    window.__sunLight.position.set(px + 60, 100, pz + 40);
+    window.__sunLight.target.position.set(px, 0, pz);
+    window.__sunLight.target.updateMatrixWorld();
+  }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2425,6 +2709,37 @@ function drawMinimap() {
     const bw=(b.maxX-b.minX)*s, bd=(b.maxZ-b.minZ)*s;
     mmCtx.fillRect(bx, bz, bw, bd);
   });
+
+  // Property markers — gold for sale, green if owned, mansion is a star
+  if (typeof PROPERTIES_DATA !== 'undefined') {
+    PROPERTIES_DATA.forEach(p => {
+      const mx = (p.pos.x + WORLD) * s;
+      const mz = (p.pos.z + WORLD) * s;
+      const owned = ownedProperties.has(p.id);
+      const isMansion = p.type === 'mansion';
+      mmCtx.shadowColor = owned ? '#44ff66' : '#ffaa00';
+      mmCtx.shadowBlur = isMansion ? 8 : 4;
+      mmCtx.fillStyle = owned ? '#44ff66' : '#ffaa00';
+      if (isMansion) {
+        // small star (4 spokes)
+        const sz = 3;
+        mmCtx.beginPath();
+        mmCtx.moveTo(mx, mz - sz);
+        mmCtx.lineTo(mx + sz*0.4, mz - sz*0.4);
+        mmCtx.lineTo(mx + sz, mz);
+        mmCtx.lineTo(mx + sz*0.4, mz + sz*0.4);
+        mmCtx.lineTo(mx, mz + sz);
+        mmCtx.lineTo(mx - sz*0.4, mz + sz*0.4);
+        mmCtx.lineTo(mx - sz, mz);
+        mmCtx.lineTo(mx - sz*0.4, mz - sz*0.4);
+        mmCtx.closePath();
+        mmCtx.fill();
+      } else {
+        mmCtx.fillRect(mx - 2, mz - 2, 4, 4);
+      }
+      mmCtx.shadowBlur = 0;
+    });
+  }
 
   // Pickups
   pickups.forEach(p => {
@@ -2664,6 +2979,8 @@ function loop() {
   trySpawnPolice(dt);
   updatePolice(dt);
   updateMissions(dt);
+  updateProperties(dt);
+  if (pState.inMansion) checkMansionExit();
   updateCamera();
   updateWorld(dt, t);
   drawMinimap();
@@ -2696,17 +3013,63 @@ function updateActionBtn() {
     actionBtn.classList.remove('exit');
     actionIcon.textContent = '🚗';
     actionLabel.textContent = 'SUBIR';
-  } else {
-    actionBtn.style.display = 'none';
+    return;
   }
+
+  // Property prompt
+  if (pState.inMansion) {
+    // Show exit button only when near the door
+    if (mansionInterior) {
+      const dx = pState.pos.x - 0;
+      const dz = pState.pos.z - (5000 + mansionInterior.exitPos.z);
+      if (Math.sqrt(dx*dx + dz*dz) < 2.0) {
+        actionBtn.style.display = 'flex';
+        actionBtn.classList.add('exit');
+        actionIcon.textContent = '🚪';
+        actionLabel.textContent = 'SALIR';
+        return;
+      }
+    }
+    actionBtn.style.display = 'none';
+    return;
+  }
+  if (nearbyProperty) {
+    const p = nearbyProperty.data;
+    const owned = ownedProperties.has(p.id);
+    actionBtn.style.display = 'flex';
+    if (owned && p.type === 'mansion') {
+      actionBtn.classList.remove('exit');
+      actionIcon.textContent = '🏛️';
+      actionLabel.textContent = 'ENTRAR';
+    } else if (owned) {
+      actionBtn.style.display = 'none'; // already own non-mansion, no action needed
+    } else if (pState.money >= p.price) {
+      actionBtn.classList.remove('exit');
+      actionIcon.textContent = '🏡';
+      actionLabel.textContent = 'COMPRAR';
+    } else {
+      actionBtn.style.display = 'none';
+    }
+    return;
+  }
+
+  actionBtn.style.display = 'none';
 }
 
 function doActionBtn() {
   if (driving) {
     exitVehicle();
-  } else {
-    const v = findNearbyVehicle();
-    if (v) enterVehicle(v);
+    return;
+  }
+  if (pState.inMansion) {
+    checkMansionExit();
+    return;
+  }
+  const v = findNearbyVehicle();
+  if (v) { enterVehicle(v); return; }
+  if (nearbyProperty) {
+    tryBuyOrEnterProperty();
+    return;
   }
 }
 
@@ -3058,8 +3421,10 @@ function startGame() {
   clock.start();
   refreshHUD();
   updateWanted();
+  updateMoney();
   addFeed('👋 ¡Bienvenido, Augusto!');
   addFeed('🔫 Busca armas brillantes en el suelo');
+  addFeed(`🏡 Hay ${PROPERTIES_DATA.length} propiedades para comprar (B)`);
   startMission(0);
   loop();
 }
@@ -3080,9 +3445,564 @@ function isMobile() {
 }
 
 /* ═══════════════════════════════════════════════════
-   BOOT
+   PROPERTIES — comprar casas y entrar a la mansión
 ═══════════════════════════════════════════════════ */
-init();
+const PROPERTIES_DATA = [
+  { id:'casa1', name:'Casa Suburbana',  price:1200,  pos:{x: 80, z:-180}, color:0xc89e6a, accent:0x6d4c3e, w:14, d:14, h:6, type:'house' },
+  { id:'casa2', name:'Casa Familiar',   price:2500,  pos:{x:-120, z: 80}, color:0xb5d4e0, accent:0x4a6c7c, w:16, d:14, h:7, type:'house' },
+  { id:'casa3', name:'Casa Moderna',    price:4500,  pos:{x:200, z: 110}, color:0xf2e6cf, accent:0x2a2a2a, w:18, d:16, h:8, type:'house' },
+  { id:'casa4', name:'Loft Centro',     price:7000,  pos:{x:-50, z: 250}, color:0x8d99ae, accent:0x2b2d42, w:14, d:18, h:11,type:'house' },
+  { id:'casa5', name:'Casa Playa',      price:12000, pos:{x:-280, z:-180}, color:0xfff8e8, accent:0x88b8d8, w:18, d:18, h:7, type:'house' },
+  { id:'casa6', name:'Penthouse Norte', price:25000, pos:{x:300, z:-280}, color:0x1a1a2e, accent:0xd4af37, w:18, d:18, h:14,type:'house' },
+  { id:'mansion',name:'🏛️ Mansión Augusto', price:75000, pos:{x:-330, z: 320}, color:0xfff5e6, accent:0xc9a227, w:32, d:28, h:12, type:'mansion' },
+];
+
+const ownedProperties = (() => {
+  try { return new Set(JSON.parse(localStorage.getItem('ag_owned_properties') || '[]')); }
+  catch(e) { return new Set(); }
+})();
+const saveOwned = () => {
+  try { localStorage.setItem('ag_owned_properties', JSON.stringify([...ownedProperties])); } catch(e) {}
+};
+
+const propertyMeshes = []; // { data, group, portalY }
+let nearbyProperty = null;
+let mansionInterior = null;
+let mansionReturnPos = null;
+const buildingsBackup = []; // for stashing collision when entering mansion
+
+function spawnProperties(occupied) {
+  PROPERTIES_DATA.forEach(p => {
+    // Push position into occupied so other procedural buildings/trees won't overlap
+    occupied.push({ x:p.pos.x, z:p.pos.z, w:p.w + 6, d:p.d + 6 });
+    const g = makePropertyMesh(p);
+    propertyMeshes.push({ data:p, group:g });
+  });
+}
+
+function makePropertyMesh(p) {
+  const g = new THREE.Group();
+  const isMansion = p.type === 'mansion';
+
+  // ── Front yard (lighter ground) ──
+  const yardGeo = new THREE.PlaneGeometry(p.w + 8, p.d + 8);
+  const yardMat = new THREE.MeshLambertMaterial({ color: isMansion ? 0xc8d8a8 : 0xa8c890 });
+  const yard = new THREE.Mesh(yardGeo, yardMat);
+  yard.rotation.x = -Math.PI/2;
+  yard.position.set(0, 0.02, 0);
+  yard.receiveShadow = true;
+  g.add(yard);
+
+  // ── Driveway (gravel/concrete strip to entrance) ──
+  const drive = new THREE.Mesh(
+    new THREE.PlaneGeometry(p.w * 0.35, p.d/2 + 4),
+    new THREE.MeshLambertMaterial({ color: 0x666666 })
+  );
+  drive.rotation.x = -Math.PI/2;
+  drive.position.set(0, 0.04, p.d/2 + 2);
+  g.add(drive);
+
+  // ── Foundation (slightly larger base, dark) ──
+  const fnd = new THREE.Mesh(
+    new THREE.BoxGeometry(p.w + 0.6, 0.4, p.d + 0.6),
+    new THREE.MeshLambertMaterial({ color:0x444444 })
+  );
+  fnd.position.y = 0.2;
+  g.add(fnd);
+
+  // ── Main wall ──
+  const wallMat = new THREE.MeshPhongMaterial({ color:p.color, shininess:10 });
+  const walls = new THREE.Mesh(
+    new THREE.BoxGeometry(p.w, p.h, p.d),
+    wallMat
+  );
+  walls.position.y = 0.4 + p.h/2;
+  walls.castShadow = walls.receiveShadow = true;
+  g.add(walls);
+
+  // ── Roof (pyramid for houses, flat with crown for mansion) ──
+  if (isMansion) {
+    // Flat roof with crown
+    const roof = new THREE.Mesh(
+      new THREE.BoxGeometry(p.w + 0.8, 0.6, p.d + 0.8),
+      new THREE.MeshPhongMaterial({ color:p.accent, shininess:60 })
+    );
+    roof.position.y = 0.4 + p.h + 0.3;
+    roof.castShadow = true;
+    g.add(roof);
+    // Decorative columns at front
+    [-1, 1].forEach(side => {
+      const col = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5, 0.5, p.h - 0.4, 12),
+        new THREE.MeshPhongMaterial({ color:0xfff8e0, shininess:50 })
+      );
+      col.position.set(side * (p.w*0.32), 0.4 + (p.h-0.4)/2, p.d/2 + 0.3);
+      col.castShadow = true;
+      g.add(col);
+    });
+    // Dome
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(p.w*0.18, 16, 12),
+      new THREE.MeshPhongMaterial({ color:p.accent, shininess:120, specular:0x886600 })
+    );
+    dome.position.y = 0.4 + p.h + 0.6 + p.w*0.18*0.5;
+    g.add(dome);
+  } else {
+    // Pitched pyramid roof
+    const roofGeo = new THREE.ConeGeometry(Math.max(p.w, p.d) * 0.8, p.h * 0.55, 4);
+    const roofMat = new THREE.MeshPhongMaterial({ color:p.accent, shininess:30 });
+    const roof = new THREE.Mesh(roofGeo, roofMat);
+    roof.rotation.y = Math.PI/4;
+    roof.position.y = 0.4 + p.h + p.h*0.55/2;
+    roof.castShadow = true;
+    g.add(roof);
+    // Chimney
+    const chim = new THREE.Mesh(
+      new THREE.BoxGeometry(0.8, 1.6, 0.8),
+      new THREE.MeshLambertMaterial({ color:0x8b4513 })
+    );
+    chim.position.set(p.w*0.3, 0.4 + p.h + 0.8, p.d*0.2);
+    chim.castShadow = true;
+    g.add(chim);
+  }
+
+  // ── Door ──
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(0.15, 2.4, 1.4),
+    new THREE.MeshPhongMaterial({ color: isMansion ? 0xd4af37 : 0x4a2c1c, shininess: isMansion?100:20 })
+  );
+  door.position.set(p.w/2 + 0.07, 0.4 + 1.2, 0);
+  g.add(door);
+  // Doorknob
+  const knob = new THREE.Mesh(
+    new THREE.SphereGeometry(0.08, 8, 8),
+    new THREE.MeshPhongMaterial({ color:0xddd700, shininess:150 })
+  );
+  knob.position.set(p.w/2 + 0.16, 0.4 + 1.2, -0.5);
+  g.add(knob);
+
+  // ── Windows ── (front)
+  const winMat = new THREE.MeshPhongMaterial({ color:0x88aacc, shininess:120, specular:0x4488cc });
+  const winRows = isMansion ? 2 : Math.floor(p.h / 3);
+  const winsPerRow = Math.max(2, Math.floor(p.w / 3));
+  for (let row = 0; row < winRows; row++) {
+    for (let i = 0; i < winsPerRow; i++) {
+      if (row === 0 && Math.abs(i - winsPerRow/2 + 0.5) < 1) continue; // skip front door area
+      const win = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 1.0, 0.8),
+        winMat
+      );
+      const offset = ((i - (winsPerRow-1)/2) * (p.w/winsPerRow));
+      win.position.set(p.w/2 + 0.03, 0.4 + 1.2 + row*2.4, offset);
+      g.add(win);
+    }
+  }
+  // Side windows
+  [-1, 1].forEach(side => {
+    for (let row = 0; row < winRows; row++) {
+      const winsSide = Math.max(2, Math.floor(p.d / 3.5));
+      for (let i = 0; i < winsSide; i++) {
+        const win = new THREE.Mesh(
+          new THREE.BoxGeometry(0.8, 1.0, 0.05),
+          winMat
+        );
+        const offset = ((i - (winsSide-1)/2) * (p.d/winsSide));
+        win.position.set(side * (p.w/2 + 0.03), 0.4 + 1.2 + row*2.4, offset);
+        g.add(win);
+      }
+    }
+  });
+
+  // ── Property sign (FOR SALE / OWNED) ──
+  const signColor = ownedProperties.has(p.id) ? 0x44dd44 : 0xddaa00;
+  const sign = new THREE.Mesh(
+    new THREE.BoxGeometry(2.0, 0.8, 0.1),
+    new THREE.MeshPhongMaterial({ color: signColor, emissive: signColor, emissiveIntensity:0.3 })
+  );
+  sign.position.set(p.w/2 + 0.5, 1.6, p.d/2 + 1.5);
+  sign.userData.isPropertySign = true;
+  g.add(sign);
+  const signPole = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 1.6, 0.1),
+    new THREE.MeshLambertMaterial({ color:0x222222 })
+  );
+  signPole.position.set(p.w/2 + 0.5, 0.8, p.d/2 + 1.5);
+  g.add(signPole);
+
+  // ── Hedge / fence around perimeter ──
+  const hedgeMat = new THREE.MeshLambertMaterial({ color:0x2d5d2d });
+  const hedgeH = 1.0;
+  // front hedge with gap for driveway
+  const gapW = p.w * 0.4;
+  const hedgeFL = new THREE.Mesh(
+    new THREE.BoxGeometry((p.w + 8 - gapW)/2 - 0.5, hedgeH, 0.5),
+    hedgeMat
+  );
+  hedgeFL.position.set(-(p.w + 8)/4 - gapW/4, hedgeH/2, p.d/2 + 4);
+  g.add(hedgeFL);
+  const hedgeFR = hedgeFL.clone();
+  hedgeFR.position.x = (p.w + 8)/4 + gapW/4;
+  g.add(hedgeFR);
+
+  // ── Glow portal at door for interaction ──
+  const portalGeo = new THREE.RingGeometry(1.0, 1.4, 24);
+  const portalMat = new THREE.MeshBasicMaterial({
+    color: ownedProperties.has(p.id) ? 0x44ff66 : 0xffd700,
+    side: THREE.DoubleSide, transparent:true, opacity:0.55
+  });
+  const portal = new THREE.Mesh(portalGeo, portalMat);
+  portal.rotation.x = -Math.PI/2;
+  portal.position.set(p.w/2 + 1.6, 0.05, 0);
+  portal.userData.isPortal = true;
+  g.add(portal);
+
+  g.position.set(p.pos.x, 0, p.pos.z);
+  scene.add(g);
+
+  // Add to collision: house body (roughly the wall box, same XZ)
+  buildings.push({
+    minX: p.pos.x - p.w/2, maxX: p.pos.x + p.w/2,
+    minZ: p.pos.z - p.d/2, maxZ: p.pos.z + p.d/2
+  });
+
+  return g;
+}
+
+function updateProperties(dt) {
+  // Don't show prompts while inside mansion
+  if (pState.inMansion) {
+    document.getElementById('property-prompt').style.display = 'none';
+    nearbyProperty = null;
+    return;
+  }
+  // Find nearest property within range
+  let closest = null, closestDist = 4.5;
+  for (const pm of propertyMeshes) {
+    const px = pm.data.pos.x + pm.data.w/2 + 1.6;
+    const pz = pm.data.pos.z;
+    const dx = pState.pos.x - px;
+    const dz = pState.pos.z - pz;
+    const d = Math.sqrt(dx*dx + dz*dz);
+    if (d < closestDist) { closestDist = d; closest = pm; }
+    // Animate portal pulse
+    pm.group.children.forEach(c => {
+      if (c.userData && c.userData.isPortal) {
+        c.material.opacity = 0.45 + 0.2 * Math.sin(performance.now()*0.003);
+      }
+    });
+  }
+  nearbyProperty = closest;
+
+  const prompt = document.getElementById('property-prompt');
+  if (closest) {
+    const owned = ownedProperties.has(closest.data.price ? closest.data.id : '');
+    const isOwn = ownedProperties.has(closest.data.id);
+    const canAfford = pState.money >= closest.data.price;
+    document.getElementById('pp-title').textContent = closest.data.name;
+    document.getElementById('pp-price').textContent = '$' + closest.data.price.toLocaleString('es-CL');
+    if (isOwn) {
+      document.getElementById('pp-status').textContent = '✓ Tu propiedad';
+      document.getElementById('pp-action').innerHTML = closest.data.type === 'mansion'
+        ? 'Pulsa <b>B</b> para entrar 🏛️'
+        : '🏡 Casa Augusto';
+      prompt.classList.add('owned');
+      prompt.classList.remove('cant-afford');
+    } else if (!canAfford) {
+      document.getElementById('pp-status').textContent = 'A la venta';
+      document.getElementById('pp-action').innerHTML = `Necesitas <b>$${(closest.data.price - pState.money).toLocaleString('es-CL')}</b> más`;
+      prompt.classList.remove('owned');
+      prompt.classList.add('cant-afford');
+    } else {
+      document.getElementById('pp-status').textContent = 'A la venta';
+      document.getElementById('pp-action').innerHTML = 'Pulsa <b>B</b> para comprar';
+      prompt.classList.remove('owned', 'cant-afford');
+    }
+    prompt.style.display = 'block';
+  } else {
+    prompt.style.display = 'none';
+  }
+}
+
+function tryBuyOrEnterProperty() {
+  if (!nearbyProperty) return;
+  const p = nearbyProperty.data;
+  if (ownedProperties.has(p.id)) {
+    // Already owned: enter mansion
+    if (p.type === 'mansion') enterMansion();
+    else addFeed(`🏡 Estás en ${p.name}`);
+    return;
+  }
+  if (pState.money < p.price) {
+    addFeed(`💸 Te faltan $${p.price - pState.money}`);
+    return;
+  }
+  pState.money -= p.price;
+  ownedProperties.add(p.id);
+  saveOwned();
+  updateMoney();
+  // Repaint sign and portal green
+  nearbyProperty.group.children.forEach(c => {
+    if (c.userData && c.userData.isPortal) c.material.color.setHex(0x44ff66);
+    if (c.userData && c.userData.isPropertySign) {
+      c.material.color.setHex(0x44dd44);
+      c.material.emissive.setHex(0x44dd44);
+    }
+  });
+  showPurchaseToast(p.name);
+  pState.score += 1000;
+  document.getElementById('score-val').textContent = pState.score;
+}
+
+function showPurchaseToast(name) {
+  const t = document.getElementById('purchase-toast');
+  document.getElementById('pt-name').textContent = name;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function updateMoney() {
+  document.getElementById('money-val').textContent = pState.money.toLocaleString('es-CL');
+}
+
+/* ─── MANSION INTERIOR ─── */
+function buildMansionInterior() {
+  const g = new THREE.Group();
+  const W = 30, D = 24, H = 6;
+
+  // Marble floor
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(W, D),
+    new THREE.MeshPhongMaterial({ color:0xf0e8d8, shininess:60 })
+  );
+  floor.rotation.x = -Math.PI/2;
+  floor.receiveShadow = true;
+  g.add(floor);
+
+  // Ceiling
+  const ceil = new THREE.Mesh(
+    new THREE.PlaneGeometry(W, D),
+    new THREE.MeshLambertMaterial({ color:0xfff8e8 })
+  );
+  ceil.rotation.x = Math.PI/2;
+  ceil.position.y = H;
+  g.add(ceil);
+
+  // Walls (4 sides)
+  const wallMat = new THREE.MeshLambertMaterial({ color:0xe8d8b8 });
+  // Back wall
+  const wb = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.4), wallMat);
+  wb.position.set(0, H/2, -D/2);
+  g.add(wb);
+  // Front wall (with door opening — split into two)
+  const wfL = new THREE.Mesh(new THREE.BoxGeometry((W-3)/2, H, 0.4), wallMat);
+  wfL.position.set(-(W/4 + 0.75), H/2, D/2);
+  g.add(wfL);
+  const wfR = wfL.clone();
+  wfR.position.x = (W/4 + 0.75);
+  g.add(wfR);
+  // Lintel above door
+  const wfTop = new THREE.Mesh(new THREE.BoxGeometry(3, H - 2.5, 0.4), wallMat);
+  wfTop.position.set(0, H - (H - 2.5)/2, D/2);
+  g.add(wfTop);
+  // Side walls
+  const wL = new THREE.Mesh(new THREE.BoxGeometry(0.4, H, D), wallMat);
+  wL.position.set(-W/2, H/2, 0);
+  g.add(wL);
+  const wR = wL.clone();
+  wR.position.x = W/2;
+  g.add(wR);
+
+  // Interior collision (the four walls minus the door gap)
+  const interiorWalls = [
+    { minX:-W/2, maxX: W/2,   minZ:-D/2 - 0.3, maxZ:-D/2 + 0.3 }, // back
+    { minX:-W/2 - 0.3, maxX:-W/2 + 0.3, minZ:-D/2, maxZ:D/2 }, // left
+    { minX: W/2 - 0.3, maxX: W/2 + 0.3, minZ:-D/2, maxZ:D/2 }, // right
+    { minX:-W/2, maxX:-1.5, minZ:D/2 - 0.3, maxZ:D/2 + 0.3 }, // front-L
+    { minX: 1.5, maxX: W/2, minZ:D/2 - 0.3, maxZ:D/2 + 0.3 }, // front-R
+  ];
+
+  // ── Furniture ──
+  const woodMat = new THREE.MeshPhongMaterial({ color:0x8b5a3c, shininess:30 });
+  const sofaMat = new THREE.MeshPhongMaterial({ color:0x6a3a3a, shininess:5 });
+  // Long sofa
+  const sofa = new THREE.Mesh(new THREE.BoxGeometry(6, 1.2, 1.6), sofaMat);
+  sofa.position.set(-6, 0.6, -D/2 + 2);
+  sofa.castShadow = true;
+  g.add(sofa);
+  const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(6, 1.2, 0.4), sofaMat);
+  sofaBack.position.set(-6, 1.2, -D/2 + 1.4);
+  g.add(sofaBack);
+  // Coffee table
+  const table = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.5, 1.2), woodMat);
+  table.position.set(-6, 0.25, -D/2 + 4.5);
+  g.add(table);
+  // Dining table
+  const dt = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 2.0), woodMat);
+  dt.position.set(7, 1.0, -3);
+  g.add(dt);
+  // Dining table legs
+  [[-1.8,-0.9],[1.8,-0.9],[-1.8,0.9],[1.8,0.9]].forEach(([dx,dz]) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.0, 0.2), woodMat);
+    leg.position.set(7 + dx, 0.5, -3 + dz);
+    g.add(leg);
+  });
+  // Chairs around dining table
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    const cx = 7 + Math.cos(angle) * 1.6;
+    const cz = -3 + Math.sin(angle) * 1.4;
+    const ch = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), woodMat);
+    ch.position.set(cx, 0.5, cz);
+    g.add(ch);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.1), woodMat);
+    back.position.set(cx, 0.95, cz - 0.25);
+    back.lookAt(7, 0.95, -3);
+    g.add(back);
+  }
+  // Fireplace
+  const fp = new THREE.Mesh(new THREE.BoxGeometry(3, 2.5, 0.6), new THREE.MeshLambertMaterial({ color:0x8b6f47 }));
+  fp.position.set(0, 1.25, -D/2 + 0.5);
+  g.add(fp);
+  const fire = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 0.8, 0.3),
+    new THREE.MeshBasicMaterial({ color:0xff6622 })
+  );
+  fire.position.set(0, 0.6, -D/2 + 0.85);
+  g.add(fire);
+  // Chandelier
+  const chand = new THREE.Mesh(
+    new THREE.SphereGeometry(0.6, 16, 12),
+    new THREE.MeshBasicMaterial({ color:0xfff0c0 })
+  );
+  chand.position.set(0, H - 1.5, 0);
+  g.add(chand);
+  const chandLight = new THREE.PointLight(0xfff0c0, 0.8, 25);
+  chandLight.position.copy(chand.position);
+  g.add(chandLight);
+  // Carpet
+  const carpet = new THREE.Mesh(
+    new THREE.PlaneGeometry(8, 5),
+    new THREE.MeshLambertMaterial({ color:0x5a2828 })
+  );
+  carpet.rotation.x = -Math.PI/2;
+  carpet.position.set(-6, 0.03, -D/2 + 4);
+  g.add(carpet);
+  // Wall art (frames on side walls)
+  for (let i = 0; i < 3; i++) {
+    const frame = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 1.5, 1.2),
+      new THREE.MeshPhongMaterial({ color:0xc9a227, shininess:80 })
+    );
+    frame.position.set(-W/2 + 0.3, 3, -8 + i*5);
+    g.add(frame);
+    const canvas = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 1.3, 1.0),
+      new THREE.MeshLambertMaterial({ color: i===0?0x884422:i===1?0x224488:0x448822 })
+    );
+    canvas.position.set(-W/2 + 0.35, 3, -8 + i*5);
+    g.add(canvas);
+  }
+  // Stairs going up (decorative)
+  for (let i = 0; i < 8; i++) {
+    const step = new THREE.Mesh(
+      new THREE.BoxGeometry(3, 0.25, 0.6 + i*0.04),
+      woodMat
+    );
+    step.position.set(W/2 - 4, 0.125 + i*0.25, D/2 - 5 - i*0.6);
+    g.add(step);
+  }
+
+  // EXIT trigger plane (visual)
+  const exit = new THREE.Mesh(
+    new THREE.RingGeometry(1.0, 1.4, 24),
+    new THREE.MeshBasicMaterial({ color:0xff4444, transparent:true, opacity:0.6, side:THREE.DoubleSide })
+  );
+  exit.rotation.x = -Math.PI/2;
+  exit.position.set(0, 0.05, D/2 - 0.5);
+  exit.userData.isExitPortal = true;
+  g.add(exit);
+
+  // Welcome label (HTML overlay alternative: a simple emissive box)
+  const welcomeBox = new THREE.Mesh(
+    new THREE.BoxGeometry(5, 0.8, 0.1),
+    new THREE.MeshBasicMaterial({ color:0xc9a227 })
+  );
+  welcomeBox.position.set(0, H - 1, -D/2 + 0.3);
+  g.add(welcomeBox);
+
+  g.position.set(0, 0, 0);
+  return { group: g, walls: interiorWalls, exitPos: { x: 0, z: D/2 - 0.5 } };
+}
+
+function enterMansion() {
+  if (pState.inMansion) return;
+  const data = PROPERTIES_DATA.find(p => p.id === 'mansion');
+  if (!data) return;
+
+  // Stash exterior collision and player return spot
+  mansionReturnPos = { x: data.pos.x + data.w/2 + 4, z: data.pos.z };
+  for (const b of buildings) buildingsBackup.push(b);
+  buildings.length = 0;
+
+  // Hide exterior world (we'll hide via fog/teleport — easier: teleport to an offset)
+  // Build interior (or reuse if cached)
+  if (!mansionInterior) mansionInterior = buildMansionInterior();
+  mansionInterior.group.position.set(0, 0, 5000); // far offset to hide from world
+  scene.add(mansionInterior.group);
+
+  // Move player into mansion (offset by same 5000 in Z)
+  pState.pos.x = 0;
+  pState.pos.z = 5000 + 8;
+  pState.inMansion = true;
+
+  // Push interior collisions (offset)
+  for (const w of mansionInterior.walls) {
+    buildings.push({
+      minX: w.minX, maxX: w.maxX,
+      minZ: w.minZ + 5000, maxZ: w.maxZ + 5000
+    });
+  }
+
+  addFeed('🏛️ Bienvenido a la Mansión Augusto');
+  // Calmer atmosphere
+  scene.fog = new THREE.FogExp2(0xfff0d8, 0.025);
+}
+
+function exitMansion() {
+  if (!pState.inMansion) return;
+  // Remove interior from scene
+  if (mansionInterior) scene.remove(mansionInterior.group);
+  // Restore exterior collisions
+  buildings.length = 0;
+  for (const b of buildingsBackup) buildings.push(b);
+  buildingsBackup.length = 0;
+  // Teleport back near mansion door
+  pState.pos.x = mansionReturnPos.x;
+  pState.pos.z = mansionReturnPos.z;
+  pState.inMansion = false;
+  // Restore outdoor fog
+  scene.fog = new THREE.FogExp2(0xa8c8e8, 0.0035);
+  addFeed('🚪 Saliste de la mansión');
+}
+
+function checkMansionExit() {
+  if (!pState.inMansion || !mansionInterior) return;
+  const exitX = 0;
+  const exitZ = 5000 + mansionInterior.exitPos.z;
+  const dx = pState.pos.x - exitX;
+  const dz = pState.pos.z - exitZ;
+  if (Math.sqrt(dx*dx + dz*dz) < 1.6) exitMansion();
+}
+
+// Hook B key to buy/enter
+window.addEventListener('keydown', e => {
+  if (e.code === 'KeyB' && gameRunning && !playerDead) {
+    if (pState.inMansion) checkMansionExit();
+    else tryBuyOrEnterProperty();
+  }
+});
+
+
 
 /* ═══════════════════════════════════════════════════
    AG BRIDGE — Reporta puntaje al shell AugustoGames
