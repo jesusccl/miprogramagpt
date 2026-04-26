@@ -2460,9 +2460,11 @@ function resolvePos(newX, newZ) {
     }
   }
 
-  const BOUND = WORLD - 1;
-  rx = Math.max(-BOUND, Math.min(BOUND, rx));
-  rz = Math.max(-BOUND, Math.min(BOUND, rz));
+  if (!pState.inMansion) {
+    const BOUND = WORLD - 1;
+    rx = Math.max(-BOUND, Math.min(BOUND, rx));
+    rz = Math.max(-BOUND, Math.min(BOUND, rz));
+  }
   return { x:rx, z:rz };
 }
 
