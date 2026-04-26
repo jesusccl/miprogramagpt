@@ -115,21 +115,32 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
 
 /* Crosshair */
 #xhair {
-  position:absolute; top:50%; left:50%;
+  position:absolute; top:38%; left:50%;
   width:24px; height:24px;
   transform:translate(-50%,-50%);
   pointer-events:none;
+  filter: drop-shadow(0 0 3px rgba(0,0,0,0.7));
 }
 #xhair::before,#xhair::after {
-  content:''; position:absolute; background:rgba(255,255,255,0.85);
+  content:''; position:absolute; background:rgba(255,255,255,0.92);
 }
-#xhair::before { width:2px; height:100%; left:50%; transform:translateX(-50%); }
-#xhair::after  { height:2px; width:100%; top:50%; transform:translateY(-50%); }
+/* Cross with a gap in the middle (more readable) */
+#xhair::before { width:2px; height:9px; left:50%; top:0; transform:translateX(-50%); }
+#xhair::after  { width:2px; height:9px; left:50%; bottom:0; transform:translateX(-50%); }
 .xhair-dot {
   position:absolute; top:50%; left:50%;
-  width:4px; height:4px; background:#fff;
+  width:3px; height:3px; background:#ff5252;
   border-radius:50%; transform:translate(-50%,-50%);
+  box-shadow: 0 0 4px rgba(255,82,82,0.8);
 }
+/* Side ticks — gives it the proper crosshair feel */
+.xhair-tick {
+  position:absolute; top:50%; width:9px; height:2px;
+  background:rgba(255,255,255,0.92);
+  transform:translateY(-50%);
+}
+.xhair-tick.left  { left:0; }
+.xhair-tick.right { right:0; }
 
 /* Kill feed */
 #kill-feed {
@@ -490,7 +501,7 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
 <div id="hud">
   <div id="name-tag">⚡ AUGUSTO</div>
   <div id="score-tag">PUNTOS: <span id="score-val">0</span></div>
-  <div id="money-tag">💵 $<span id="money-val">500</span></div>
+  <div id="money-tag">💵 $<span id="money-val">1.000.000</span></div>
   <div id="wanted-wrap">
     <div id="wanted-label">SE BUSCA</div>
     <div id="wanted-stars">☆☆☆☆☆</div>
@@ -503,7 +514,7 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
     <div id="weapon-name">Sin arma</div>
     <div id="ammo-count"></div>
   </div>
-  <div id="xhair"><div class="xhair-dot"></div></div>
+  <div id="xhair"><div class="xhair-tick left"></div><div class="xhair-tick right"></div><div class="xhair-dot"></div></div>
   <div id="kill-feed"></div>
   <div id="mission-panel">
     <div id="mission-header">📋 MISIÓN</div>
@@ -592,7 +603,7 @@ let renderer, scene, camera, clock;
 let gameRunning = false;
 let playerDead = false;
 
-const WORLD = 230; // half-size
+const WORLD = 115; // half-size
 const MAP_SCALE = 110 / (WORLD * 2);
 
 // ─── Input ───
@@ -608,7 +619,7 @@ const pState = {
   weapon:  null,    // 'pistol'|'rifle'|'shotgun'
   ammo:    0,
   score:   0,
-  money:   500,     // starting cash
+  money:   1000000, // starting cash
   wanted:  0,
   wantedT: 0,
   shootCooldown: 0,
@@ -716,22 +727,30 @@ function init() {
    LIGHTING
 ═══════════════════════════════════════════════════ */
 function buildLights() {
-  scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 
-  const sun = new THREE.DirectionalLight(0xfff0d8, 1.0);
+  // Main sun (warm, casts shadows)
+  const sun = new THREE.DirectionalLight(0xfff4d6, 1.15);
   sun.position.set(60, 100, 40);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.bias = -0.0002;
+  sun.shadow.radius = 2;
   const sc = sun.shadow.camera;
-  sc.near = 1; sc.far = 280;
-  sc.left = sc.bottom = -75;
-  sc.right = sc.top = 75;
+  sc.near = 1; sc.far = 220;
+  sc.left = sc.bottom = -60;
+  sc.right = sc.top = 60;
   scene.add(sun);
   scene.add(sun.target);
   window.__sunLight = sun;
 
-  scene.add(new THREE.HemisphereLight(0xb0d4ee, 0x554433, 0.55));
+  // Cool fill from the opposite side (rim light, no shadows)
+  const fill = new THREE.DirectionalLight(0x88aacc, 0.35);
+  fill.position.set(-50, 60, -30);
+  scene.add(fill);
+
+  // Hemisphere for sky/ground bounce
+  scene.add(new THREE.HemisphereLight(0xb0d4ee, 0x554433, 0.5));
 }
 
 /* ═══════════════════════════════════════════════════
@@ -880,44 +899,27 @@ function makeBuildingTex(baseColor, w=128, h=256, winCols=4, winRows=8) {
 function buildWorld() {
   buildTextures();
 
-  // Ground (grass)
+  // Ground (grass) — sits a hair below the road system so road boxes cap it cleanly
   const gTex = TEX.grass.clone();
   gTex.needsUpdate = true;
-  gTex.repeat.set(150, 150);
+  gTex.repeat.set(60, 60);
   gTex.wrapS = gTex.wrapT = THREE.RepeatWrapping;
   const gGeo = new THREE.PlaneGeometry(WORLD*2, WORLD*2);
   const gMat = new THREE.MeshLambertMaterial({ map: gTex });
   const gnd  = new THREE.Mesh(gGeo, gMat);
-  gnd.rotation.x = -Math.PI/2; gnd.receiveShadow = true;
+  gnd.rotation.x = -Math.PI/2;
+  gnd.position.y = -0.02;
+  gnd.receiveShadow = true;
   scene.add(gnd);
 
   // ─── Procedural road grid ───
-  // Main avenues every 100 units, secondary every 50.
-  // Horizontal & vertical roads use slightly different y offsets to avoid coplanar z-fighting at intersections.
-  const GRID_STEP = 100;
-  for (let x = -WORLD; x <= WORLD; x += GRID_STEP) {
-    makeRoad(x, 0, 12, WORLD*2, false, 0.02); // verticals slightly lower
-  }
-  for (let z = -WORLD; z <= WORLD; z += GRID_STEP) {
-    makeRoad(0, z, WORLD*2, 12, true, 0.04);  // horizontals slightly higher
-  }
-  // Secondary roads (narrower)
-  for (let x = -WORLD + 50; x < WORLD; x += GRID_STEP) {
-    makeRoad(x, 0, 8, WORLD*2, false, 0.02);
-  }
-  for (let z = -WORLD + 50; z < WORLD; z += GRID_STEP) {
-    makeRoad(0, z, WORLD*2, 8, true, 0.04);
-  }
-
-  // Sidewalks along main avenues only
-  for (let x = -WORLD; x <= WORLD; x += GRID_STEP) {
-    makeSidewalk(x + 9, 0, 3, WORLD*2);
-    makeSidewalk(x - 9, 0, 3, WORLD*2);
-  }
-  for (let z = -WORLD; z <= WORLD; z += GRID_STEP) {
-    makeSidewalk(0, z + 9, WORLD*2, 3);
-    makeSidewalk(0, z - 9, WORLD*2, 3);
-  }
+  // ─── Roads & sidewalks: all merged into a single mesh per layer ───
+  // Plain colored boxes, no textures, no coplanar overlap. The grid is built
+  // by drawing road STRIPS (asphalt rectangles) — at each crossing, the strip
+  // already covers it because rectangles overlap geometrically. We then add
+  // painted lines as separate, slightly elevated meshes only on the long
+  // segments between crossings (so painted lines never cross each other).
+  buildRoadSystem();
 
   // ─── Procedural buildings ───
   // For each block (between main avenues), drop 4-8 buildings avoiding roads
@@ -948,8 +950,8 @@ function buildWorld() {
   };
 
   let placed = 0, attempts = 0;
-  const TARGET_BUILDINGS = 70;
-  while (placed < TARGET_BUILDINGS && attempts < 800) {
+  const TARGET_BUILDINGS = 36;
+  while (placed < TARGET_BUILDINGS && attempts < 600) {
     attempts++;
     const w = 12 + Math.floor(Math.random() * 14);
     const d = 12 + Math.floor(Math.random() * 14);
@@ -966,7 +968,7 @@ function buildWorld() {
 
   // ─── Trees scattered ───
   let treesPlaced = 0;
-  for (let i = 0; i < 300 && treesPlaced < 110; i++) {
+  for (let i = 0; i < 200 && treesPlaced < 60; i++) {
     const x = (Math.random() - 0.5) * (WORLD*2 - 30);
     const z = (Math.random() - 0.5) * (WORLD*2 - 30);
     if (isOnRoad(x, z, 2, 2)) continue;
@@ -1067,19 +1069,53 @@ function makeVehicle(x, z, rot, color, type) {
     g.add(trunk);
   }
 
-  // ── Cabin (passenger compartment) ──
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinL, cabinH, bodyW*0.88), bodyMat);
-  cabin.position.set(cabinXOff, groundY + bodyH + cabinH/2, 0);
+  // ── Cabin (lower box just under the windows) — narrower than chassis ──
+  const cabinW = bodyW * 0.92;
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinL, cabinH*0.40, cabinW), bodyMat);
+  cabin.position.set(cabinXOff, groundY + bodyH + cabinH*0.20, 0);
   cabin.castShadow = true;
   g.add(cabin);
 
-  // ── Glass: single canopy (front+roof+rear) ── no z-fighting since it's at +0.01 from cabin top, smaller footprint
+  // ── Glass band (continuous around the cabin, slightly inset) ──
   const glass = new THREE.Mesh(
-    new THREE.BoxGeometry(cabinL*0.85, cabinH*0.65, bodyW*0.78),
+    new THREE.BoxGeometry(cabinL*0.95, cabinH*0.45, cabinW*0.99),
     winMat
   );
-  glass.position.set(cabinXOff, groundY + bodyH + cabinH*0.55, 0);
+  glass.position.set(cabinXOff, groundY + bodyH + cabinH*0.62, 0);
   g.add(glass);
+
+  // ── Roof ── tapered narrower than cabin (shape definition)
+  const roofW = cabinW * 0.85;
+  const roofL = cabinL * 0.85;
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(roofL, cabinH*0.25, roofW),
+    bodyMat
+  );
+  roof.position.set(cabinXOff, groundY + bodyH + cabinH*0.95, 0);
+  roof.castShadow = true;
+  g.add(roof);
+
+  // ── B-pillars (each side, between front and rear windows) ──
+  [-1, 1].forEach(side => {
+    const pillar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, cabinH*0.45, 0.06),
+      bodyMat
+    );
+    pillar.position.set(cabinXOff - cabinL*0.05, groundY + bodyH + cabinH*0.62, side*cabinW*0.5);
+    g.add(pillar);
+  });
+
+  // ── A-pillars and C-pillars at the corners ──
+  [-1, 1].forEach(side => {
+    [cabinXOff + cabinL*0.45, cabinXOff - cabinL*0.45].forEach(xp => {
+      const post = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, cabinH*0.45, 0.05),
+        bodyMat
+      );
+      post.position.set(xp, groundY + bodyH + cabinH*0.62, side*cabinW*0.49);
+      g.add(post);
+    });
+  });
 
   // ── Truck cargo bed ──
   if (isTruck) {
@@ -1095,10 +1131,38 @@ function makeVehicle(x, z, rot, color, type) {
   // ── Front grille + bumper ──
   const grille = new THREE.Mesh(
     new THREE.BoxGeometry(0.06, bodyH*0.6, bodyW*0.6),
-    new THREE.MeshPhongMaterial({ color:0x222222, shininess:80 })
+    new THREE.MeshPhongMaterial({ color:0x1a1a1a, shininess:90 })
   );
   grille.position.set(bodyL/2 + 0.04, groundY + bodyH*0.45, 0);
   g.add(grille);
+  // Chrome strip across the grille
+  const chromeMat = new THREE.MeshPhongMaterial({ color:0xdddddd, shininess:160, specular:0xaaaaaa });
+  const chromeStrip = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, 0.04, bodyW*0.55),
+    chromeMat
+  );
+  chromeStrip.position.set(bodyL/2 + 0.06, groundY + bodyH*0.55, 0);
+  g.add(chromeStrip);
+
+  // ── Door handles ──
+  [-1, 1].forEach(side => {
+    const handle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.16, 0.04, 0.025),
+      chromeMat
+    );
+    handle.position.set(cabinXOff - cabinL*0.05, groundY + bodyH*0.7, side*(bodyW/2 + 0.005));
+    g.add(handle);
+  });
+
+  // ── Side mirrors ──
+  [-1, 1].forEach(side => {
+    const mirror = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.08, 0.10),
+      bodyMat
+    );
+    mirror.position.set(cabinXOff + cabinL*0.4, groundY + bodyH + cabinH*0.35, side*(bodyW/2 + 0.10));
+    g.add(mirror);
+  });
 
   const fbump = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, bodyW*0.95), trimMat);
   fbump.position.set(bodyL/2 + 0.05, groundY + 0.12, 0);
@@ -1145,6 +1209,14 @@ function makeVehicle(x, z, rot, color, type) {
       rim.rotation.x = Math.PI/2;
       g.add(rim);
       wheelRefs.push(rim);
+
+      // Wheel arch (small dark fender lip above the wheel)
+      const arch = new THREE.Mesh(
+        new THREE.BoxGeometry(wheelR*2.3, 0.05, 0.05),
+        trimMat
+      );
+      arch.position.set(wx, wheelR*1.5, side*bodyW/2);
+      g.add(arch);
     });
   });
 
@@ -1311,49 +1383,148 @@ function updateDriving(dt) {
   }
 }
 
-function makeRoad(cx, cz, w, d, horiz, yOffset) {
-  const rTex = TEX.roadH.clone();
-  rTex.needsUpdate = true;
-  rTex.wrapS = rTex.wrapT = THREE.RepeatWrapping;
-  if (horiz) rTex.repeat.set(w/20, Math.max(1, d/16));
-  else       rTex.repeat.set(Math.max(1, w/16), d/20);
+/* Build the entire road network as a few solid 3D meshes with thickness.
+ * Asphalt = thin BoxGeometry strips at y=0..0.05 (no Plane → no coplanar issues).
+ * Sidewalks = box strips at y=0..0.18 (raised curb, no z-fight against road).
+ * Painted lines = MeshBasicMaterial planes at y=0.06, ONLY along segments
+ * between intersections (lines never cross each other).
+ */
+function buildRoadSystem() {
+  const asphaltMat = new THREE.MeshLambertMaterial({ color: 0x2a2a30 });
+  const sidewalkMat = new THREE.MeshLambertMaterial({ color: 0x9ea0a3 });
+  const lineMat = new THREE.MeshBasicMaterial({ color: 0xfaf2c8 }); // warm cream, not pure white
 
-  const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(w, d),
-    new THREE.MeshLambertMaterial({
-      map: rTex,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
-    })
-  );
-  m.rotation.x = -Math.PI/2;
-  if (!horiz) m.rotation.z = Math.PI/2;
-  m.position.set(cx, yOffset != null ? yOffset : 0.03, cz);
-  m.receiveShadow = true;
-  m.renderOrder = 1;
-  scene.add(m);
-}
+  const GRID_STEP = 100;
+  const MAIN_W = 12;          // main avenue width
+  const SEC_W  = 8;           // secondary street width
+  const SW_W   = 3;           // sidewalk width
+  const ROAD_H = 0.05;        // road box thickness (just above ground)
+  const CURB_H = 0.18;        // sidewalk thickness (raised curb)
 
-function makeSidewalk(cx, cz, w, d) {
-  const sTex = TEX.sidewalk.clone();
-  sTex.needsUpdate = true;
-  sTex.wrapS = sTex.wrapT = THREE.RepeatWrapping;
-  sTex.repeat.set(w/4, d/4);
-  const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(w, d),
-    new THREE.MeshLambertMaterial({
-      map: sTex,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
-    })
-  );
-  m.rotation.x = -Math.PI/2;
-  m.position.set(cx, 0.06, cz);
-  m.receiveShadow = true;
-  m.renderOrder = 2;
-  scene.add(m);
+  // Collect main + secondary axes (used for both H and V)
+  const mainAxes = [];
+  for (let x = -WORLD; x <= WORLD; x += GRID_STEP) mainAxes.push(x);
+  const allAxes = [...mainAxes];
+  for (let x = -WORLD + 50; x < WORLD; x += GRID_STEP) allAxes.push(x);
+
+  // ── ASPHALT STRIPS (3D boxes, not planes) ──
+  // Vertical strips
+  allAxes.forEach(x => {
+    const w = mainAxes.includes(x) ? MAIN_W : SEC_W;
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(w, ROAD_H, WORLD*2),
+      asphaltMat
+    );
+    m.position.set(x, ROAD_H/2, 0);
+    m.receiveShadow = true;
+    scene.add(m);
+  });
+  // Horizontal strips
+  allAxes.forEach(z => {
+    const w = mainAxes.includes(z) ? MAIN_W : SEC_W;
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(WORLD*2, ROAD_H, w),
+      asphaltMat
+    );
+    m.position.set(0, ROAD_H/2, z);
+    m.receiveShadow = true;
+    scene.add(m);
+  });
+
+  // ── SIDEWALKS (3D raised boxes along main avenues only) ──
+  // For each main avenue, build sidewalks broken at every cross-axis (so
+  // pedestrians/players can step from sidewalk → crosswalk → sidewalk).
+  function addSidewalkSegments(perpStart, perpEnd, axisVal, isVertical) {
+    const breaks = [...allAxes].sort((a,b) => a-b);
+    let prev = perpStart;
+    for (const b of breaks) {
+      const halfW = mainAxes.includes(b) ? MAIN_W/2 : SEC_W/2;
+      const segEnd = b - halfW - SW_W*0.3;
+      if (segEnd > prev) {
+        const len = segEnd - prev;
+        const m = new THREE.Mesh(
+          isVertical
+            ? new THREE.BoxGeometry(SW_W, CURB_H, len)
+            : new THREE.BoxGeometry(len, CURB_H, SW_W),
+          sidewalkMat
+        );
+        if (isVertical) m.position.set(axisVal, CURB_H/2, prev + len/2);
+        else            m.position.set(prev + len/2, CURB_H/2, axisVal);
+        m.receiveShadow = true;
+        m.castShadow = true;
+        scene.add(m);
+      }
+      prev = b + (mainAxes.includes(b) ? MAIN_W/2 : SEC_W/2) + SW_W*0.3;
+    }
+    if (prev < perpEnd) {
+      const len = perpEnd - prev;
+      const m = new THREE.Mesh(
+        isVertical
+          ? new THREE.BoxGeometry(SW_W, CURB_H, len)
+          : new THREE.BoxGeometry(len, CURB_H, SW_W),
+        sidewalkMat
+      );
+      if (isVertical) m.position.set(axisVal, CURB_H/2, prev + len/2);
+      else            m.position.set(prev + len/2, CURB_H/2, axisVal);
+      m.receiveShadow = true;
+      m.castShadow = true;
+      scene.add(m);
+    }
+  }
+  // Sidewalks flanking each main avenue (both sides)
+  mainAxes.forEach(x => {
+    addSidewalkSegments(-WORLD, WORLD, x + MAIN_W/2 + SW_W/2, true);
+    addSidewalkSegments(-WORLD, WORLD, x - MAIN_W/2 - SW_W/2, true);
+  });
+  mainAxes.forEach(z => {
+    addSidewalkSegments(-WORLD, WORLD, z + MAIN_W/2 + SW_W/2, false);
+    addSidewalkSegments(-WORLD, WORLD, z - MAIN_W/2 - SW_W/2, false);
+  });
+
+  // ── PAINTED LINES (only between intersections) ──
+  // Center dashed line on each main avenue segment
+  function addCenterLineSegment(start, end, axisVal, isVertical) {
+    const len = end - start;
+    if (len < 4) return;
+    // dashed: 2.5m line, 2m gap
+    const dashL = 2.5, gapL = 2.0;
+    const stride = dashL + gapL;
+    const count = Math.floor(len / stride);
+    for (let i = 0; i < count; i++) {
+      const dashStart = start + i * stride + 1;
+      const m = new THREE.Mesh(
+        isVertical
+          ? new THREE.PlaneGeometry(0.18, dashL)
+          : new THREE.PlaneGeometry(dashL, 0.18),
+        lineMat
+      );
+      m.rotation.x = -Math.PI/2;
+      if (isVertical) m.position.set(axisVal, ROAD_H + 0.005, dashStart + dashL/2);
+      else            m.position.set(dashStart + dashL/2, ROAD_H + 0.005, axisVal);
+      scene.add(m);
+    }
+  }
+  // For each MAIN avenue, add center lines between every consecutive cross-axis
+  mainAxes.forEach(x => {
+    const sortedZ = [...allAxes].sort((a,b) => a-b);
+    let prev = -WORLD;
+    for (const z of sortedZ) {
+      const halfW = mainAxes.includes(z) ? MAIN_W/2 : SEC_W/2;
+      addCenterLineSegment(prev + 1, z - halfW - 1, x, true);
+      prev = z + halfW;
+    }
+    addCenterLineSegment(prev + 1, WORLD - 1, x, true);
+  });
+  mainAxes.forEach(z => {
+    const sortedX = [...allAxes].sort((a,b) => a-b);
+    let prev = -WORLD;
+    for (const x of sortedX) {
+      const halfW = mainAxes.includes(x) ? MAIN_W/2 : SEC_W/2;
+      addCenterLineSegment(prev + 1, x - halfW - 1, z, false);
+      prev = x + halfW;
+    }
+    addCenterLineSegment(prev + 1, WORLD - 1, z, false);
+  });
 }
 
 function makeBuilding(x, z, w, d, h, color) {
@@ -1444,115 +1615,260 @@ function makeLamp(x, z) {
 function buildPlayer() {
   playerGroup = new THREE.Group();
 
-  const skinMat  = new THREE.MeshLambertMaterial({ color:0xD4946A });
-  const shirtMat = new THREE.MeshLambertMaterial({ color:0x1565C0 });
-  const pantsMat = new THREE.MeshLambertMaterial({ color:0x0D1B6E });
-  const hatMat   = new THREE.MeshLambertMaterial({ color:0xB71C1C });
-  const shoeMat  = new THREE.MeshLambertMaterial({ color:0x111111 });
+  // Material palette — slightly warmer, more saturated
+  const skinMat   = new THREE.MeshLambertMaterial({ color: 0xd9a577 });
+  const shirtMat  = new THREE.MeshLambertMaterial({ color: 0x1976d2 });
+  const shirtMat2 = new THREE.MeshLambertMaterial({ color: 0x0d47a1 }); // darker accent
+  const pantsMat  = new THREE.MeshLambertMaterial({ color: 0x1a237e });
+  const pantsMat2 = new THREE.MeshLambertMaterial({ color: 0x0d1442 }); // belt/cuffs
+  const hatMat    = new THREE.MeshLambertMaterial({ color: 0xc62828 });
+  const shoeMat   = new THREE.MeshLambertMaterial({ color: 0x111111 });
+  const soleMat   = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  const hairMat   = new THREE.MeshLambertMaterial({ color: 0x2a1808 });
 
-  // Torso
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.8,0.4), shirtMat);
-  torso.position.y = 1.1; torso.castShadow = true;
+  // ── TORSO ── rounded cylinder (chest wider than waist done via top/bottom radii)
+  const torso = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.30, 0.36, 0.7, 16),
+    shirtMat
+  );
+  torso.scale.set(1.2, 1, 0.78); // squash front-back so it reads as a chest, not a barrel
+  torso.position.y = 1.15;
+  torso.castShadow = true;
   playerGroup.add(torso);
 
-  // Head
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3,12,12), skinMat);
-  head.position.y = 1.85; head.castShadow = true;
+  // Shirt hem (rounded band)
+  const hem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.39, 0.39, 0.1, 16),
+    shirtMat2
+  );
+  hem.scale.set(1.2, 1, 0.78);
+  hem.position.y = 0.81;
+  playerGroup.add(hem);
+
+  // Chest accent stripe (vertical band)
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.65, 0.02), shirtMat2);
+  stripe.position.set(0, 1.18, 0.22);
+  playerGroup.add(stripe);
+
+  // ── BELT ── (rounded)
+  const belt = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.39, 0.39, 0.08, 16),
+    pantsMat2
+  );
+  belt.scale.set(1.2, 1, 0.78);
+  belt.position.y = 0.78;
+  playerGroup.add(belt);
+  // Buckle
+  const buckle = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.08, 0.025),
+    new THREE.MeshLambertMaterial({ color: 0xddc070 })
+  );
+  buckle.position.set(0, 0.78, 0.30);
+  playerGroup.add(buckle);
+
+  // ── NECK ──
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.14, 0.16, 10), skinMat);
+  neck.position.y = 1.58;
+  neck.castShadow = true;
+  playerGroup.add(neck);
+
+  // ── HEAD ── sphere with vertical squash for human-ish proportion
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 16, 14), skinMat);
+  head.scale.set(1.0, 1.05, 0.95);
+  head.position.y = 1.95;
+  head.castShadow = true;
   playerGroup.add(head);
 
-  // Bandana
-  const bandana = new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.12,8), hatMat);
-  bandana.position.y = 2.1;
-  playerGroup.add(bandana);
-
-  // ─── AUGUSTO's FACE (facing +Z local) ───
-  const eyeWhiteMat = new THREE.MeshBasicMaterial({ color:0xffffff });
-  const pupilMat    = new THREE.MeshBasicMaterial({ color:0x1a2a3a });
-  const darkMat     = new THREE.MeshBasicMaterial({ color:0x2a1505 });
-  const beardMat    = new THREE.MeshLambertMaterial({ color:0x3a2010 });
-
-  // Eyes — white + pupil
-  [-0.1, 0.1].forEach(ex => {
-    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8), eyeWhiteMat);
-    ew.position.set(ex, 1.93, 0.24);
-    playerGroup.add(ew);
-
-    const pu = new THREE.Mesh(new THREE.SphereGeometry(0.035,6,6), pupilMat);
-    pu.position.set(ex, 1.93, 0.29);
-    playerGroup.add(pu);
-
-    // Tiny highlight
-    const hl = new THREE.Mesh(new THREE.SphereGeometry(0.012,4,4), eyeWhiteMat);
-    hl.position.set(ex+0.012, 1.945, 0.315);
-    playerGroup.add(hl);
+  // ── HAIR ── dome on top of the head (half-sphere)
+  const hairTop = new THREE.Mesh(
+    new THREE.SphereGeometry(0.27, 16, 12, 0, Math.PI*2, 0, Math.PI*0.55),
+    hairMat
+  );
+  hairTop.scale.set(1.0, 0.95, 0.95);
+  hairTop.position.y = 2.04;
+  playerGroup.add(hairTop);
+  // Sideburns
+  [-1, 1].forEach(side => {
+    const sb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), hairMat);
+    sb.scale.set(0.6, 1.6, 1.2);
+    sb.position.set(side * 0.22, 1.96, 0);
+    playerGroup.add(sb);
   });
 
-  // Eyebrows — determined look (slight angle)
-  [[-0.1, -0.12], [0.1, 0.12]].forEach(([bx, rotZ]) => {
-    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.028, 0.04), darkMat);
-    brow.position.set(bx, 2.03, 0.27);
-    brow.rotation.z = rotZ;
+  // ── BANDANA / red headband ── (torus around head)
+  const bandana = new THREE.Mesh(
+    new THREE.TorusGeometry(0.26, 0.05, 8, 20),
+    hatMat
+  );
+  bandana.rotation.x = Math.PI/2;
+  bandana.scale.set(1.0, 0.95, 1.0);
+  bandana.position.y = 2.04;
+  playerGroup.add(bandana);
+
+  // ── FACE (facing +Z local) ──
+  const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const pupilMat    = new THREE.MeshBasicMaterial({ color: 0x1a2a3a });
+  const darkMat     = new THREE.MeshBasicMaterial({ color: 0x2a1505 });
+  const beardMat    = new THREE.MeshLambertMaterial({ color: 0x3a2010 });
+
+  // Eyes — tiny round whites with darker pupils
+  [-0.09, 0.09].forEach(ex => {
+    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), eyeWhiteMat);
+    ew.scale.set(1.3, 1, 0.7);
+    ew.position.set(ex, 1.99, 0.20);
+    playerGroup.add(ew);
+    const pu = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), pupilMat);
+    pu.position.set(ex, 1.99, 0.235);
+    playerGroup.add(pu);
+  });
+
+  // Eyebrows — angled determined look (rounded cylinders)
+  [[-0.09, -0.18], [0.09, 0.18]].forEach(([bx, rotZ]) => {
+    const brow = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.018, 0.018, 0.10, 6),
+      darkMat
+    );
+    brow.rotation.z = Math.PI/2 + rotZ;
+    brow.position.set(bx, 2.06, 0.21);
     playerGroup.add(brow);
   });
 
-  // Nose — little skin bump
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.05,6,6), skinMat);
-  nose.position.set(0, 1.85, 0.295);
-  nose.scale.set(0.8, 1, 1.2);
+  // Nose — small sphere
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), skinMat);
+  nose.scale.set(0.9, 1.4, 1.2);
+  nose.position.set(0, 1.93, 0.235);
   playerGroup.add(nose);
 
-  // Mouth — confident line with slight upward smile
+  // Mouth — small smile (torus arc)
   const mouth = new THREE.Mesh(
-    new THREE.TorusGeometry(0.08, 0.015, 6, 10, Math.PI),
+    new THREE.TorusGeometry(0.06, 0.012, 6, 10, Math.PI),
     darkMat
   );
-  mouth.position.set(0, 1.72, 0.265);
-  mouth.rotation.z = Math.PI; // upward arc (smile)
+  mouth.rotation.z = Math.PI;
+  mouth.position.set(0, 1.81, 0.21);
   playerGroup.add(mouth);
 
-  // Goatee
-  const goatee = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.04), beardMat);
-  goatee.position.set(0, 1.63, 0.255);
+  // Goatee — small rounded patch (sphere)
+  const goatee = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), beardMat);
+  goatee.scale.set(1.2, 0.6, 0.5);
+  goatee.position.set(0, 1.74, 0.20);
   playerGroup.add(goatee);
 
-  // Ears
-  [-0.28, 0.28].forEach(ex => {
-    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.06,6,6), skinMat);
-    ear.position.set(ex, 1.85, 0);
-    ear.scale.set(0.6, 1, 1);
+  // Ears — small spheres on the sides
+  [-0.245, 0.245].forEach(ex => {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), skinMat);
+    ear.scale.set(0.5, 1.2, 1.2);
+    ear.position.set(ex, 1.96, 0);
     playerGroup.add(ear);
   });
 
-  // Arms
-  armL = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.6,0.22), shirtMat);
-  armL.position.set(-0.48,1.0,0); armL.castShadow = true;
+  // ── ARMS ── (rounded cylinders, sphere hand). Pivot at shoulder for animation.
+  function makeArm(side) {
+    const arm = new THREE.Group();
+
+    // Upper sleeve
+    const sleeve = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.10, 0.11, 0.42, 12),
+      shirtMat
+    );
+    sleeve.position.y = -0.21;
+    sleeve.castShadow = true;
+    arm.add(sleeve);
+
+    // Sleeve cuff (darker band, slightly wider)
+    const cuff = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.115, 0.115, 0.05, 12),
+      shirtMat2
+    );
+    cuff.position.y = -0.42;
+    arm.add(cuff);
+
+    // Forearm (skin)
+    const forearm = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.10, 0.32, 12),
+      skinMat
+    );
+    forearm.position.y = -0.6;
+    forearm.castShadow = true;
+    arm.add(forearm);
+
+    // Hand (sphere)
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.10, 12, 10), skinMat);
+    hand.scale.set(1.0, 1.1, 1.0);
+    hand.position.y = -0.80;
+    hand.castShadow = true;
+    arm.add(hand);
+
+    // Thumb hint
+    const thumb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), skinMat);
+    thumb.scale.set(0.8, 1.5, 1);
+    thumb.position.set(side * 0.08, -0.77, 0.05);
+    arm.add(thumb);
+
+    return arm;
+  }
+
+  armL = makeArm(-1);
+  armL.position.set(-0.5, 1.45, 0);
   playerGroup.add(armL);
-  armR = armL.clone();
-  armR.position.x = 0.48;
+
+  armR = makeArm(1);
+  armR.position.set(0.5, 1.45, 0);
   playerGroup.add(armR);
 
-  // Hands
-  const handGeo = new THREE.SphereGeometry(0.12,6,6);
-  [-1,1].forEach(side => {
-    const h = new THREE.Mesh(handGeo, skinMat);
-    h.position.set(side*0.48, 0.67, 0);
-    playerGroup.add(h);
-  });
+  // ── LEGS ── (rounded cylinders) — pivot at hip
+  function makeLeg() {
+    const leg = new THREE.Group();
+    // Thigh
+    const thigh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.12, 0.45, 12),
+      pantsMat
+    );
+    thigh.position.y = -0.225;
+    thigh.castShadow = true;
+    leg.add(thigh);
+    // Knee
+    const knee = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), pantsMat2);
+    knee.scale.set(1.0, 0.65, 1.0);
+    knee.position.y = -0.46;
+    leg.add(knee);
+    // Shin
+    const shin = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.11, 0.12, 0.40, 12),
+      pantsMat
+    );
+    shin.position.y = -0.69;
+    shin.castShadow = true;
+    leg.add(shin);
+    // Cuff
+    const cuff = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.13, 0.04, 12),
+      pantsMat2
+    );
+    cuff.position.y = -0.91;
+    leg.add(cuff);
 
-  // Legs
-  legL = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.75,0.28), pantsMat);
-  legL.position.set(-0.2, 0.38, 0); legL.castShadow = true;
+    // Sneaker upper (rounded box-ish — sphere stretched)
+    const shoeUpper = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), shoeMat);
+    shoeUpper.scale.set(0.95, 0.45, 1.5);
+    shoeUpper.position.set(0, -0.99, 0.07);
+    shoeUpper.castShadow = true;
+    leg.add(shoeUpper);
+    // Sole (flatter sphere)
+    const sole = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 8), soleMat);
+    sole.scale.set(0.95, 0.18, 1.55);
+    sole.position.set(0, -1.07, 0.07);
+    leg.add(sole);
+
+    return leg;
+  }
+
+  legL = makeLeg();
+  legL.position.set(-0.18, 0.78, 0);
   playerGroup.add(legL);
-  legR = legL.clone();
-  legR.position.x = 0.2;
+  legR = makeLeg();
+  legR.position.set(0.18, 0.78, 0);
   playerGroup.add(legR);
-
-  // Shoes
-  [-0.2,0.2].forEach(lx => {
-    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.15,0.38), shoeMat);
-    shoe.position.set(lx, 0.06, 0.05);
-    playerGroup.add(shoe);
-  });
 
   playerGroup.position.copy(pState.pos);
   scene.add(playerGroup);
@@ -2134,10 +2450,10 @@ function doShoot() {
   const pellets = pState.weapon === 'shotgun' ? 5 : 1;
   for (let p=0; p<pellets; p++) {
     const spreadDir = dir.clone().add(
-      new THREE.Vector3(rng(-1,1), rng(-1,1), rng(-1,1)).multiplyScalar(pState.weapon==='shotgun'?0.08:0.01)
+      new THREE.Vector3(rng(-1,1), rng(-1,1), rng(-1,1)).multiplyScalar(pState.weapon==='shotgun'?0.08:0.005)
     ).normalize();
 
-    const ray = new THREE.Raycaster(origin, spreadDir, 0, 90);
+    const ray = new THREE.Raycaster(origin, spreadDir, 0, 180);
 
     // Hit enemies
     enemies.forEach(en => {
@@ -2161,7 +2477,7 @@ function doShoot() {
     trail.position.copy(origin).add(spreadDir.clone().multiplyScalar(2));
     trail.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), spreadDir);
     scene.add(trail);
-    bullets.push({ mesh:trail, vel:spreadDir.clone().multiplyScalar(55), pos:origin.clone().add(spreadDir.clone().multiplyScalar(2)), life:0.25 });
+    bullets.push({ mesh:trail, vel:spreadDir.clone().multiplyScalar(180), pos:origin.clone().add(spreadDir.clone().multiplyScalar(2)), life:0.7 });
   }
 
   // Muzzle flash
@@ -2523,7 +2839,10 @@ function updateCamera() {
   const tz = pState.pos.z + CAM.dist*Math.cos(CAM.theta)*Math.cos(CAM.phi);
 
   camera.position.lerp(new THREE.Vector3(tx,ty,tz), 0.12);
-  camera.lookAt(pState.pos.x, pState.pos.y+1.2, pState.pos.z);
+  // Look at point that's elevated above the player. With the crosshair at 38%
+  // (above center), making the camera tilt very slightly downward keeps the
+  // crosshair visually aligned with the actual aim direction.
+  camera.lookAt(pState.pos.x, pState.pos.y + 1.6, pState.pos.z);
 
   // Sun shadow follows the player so we get crisp shadows everywhere
   if (window.__sunLight) {
@@ -3344,13 +3663,13 @@ function isMobile() {
    PROPERTIES — comprar casas y entrar a la mansión
 ═══════════════════════════════════════════════════ */
 const PROPERTIES_DATA = [
-  { id:'casa1', name:'Casa Suburbana',  price:1200,  pos:{x: 80, z:-180}, color:0xc89e6a, accent:0x6d4c3e, w:14, d:14, h:6, type:'house' },
-  { id:'casa2', name:'Casa Familiar',   price:2500,  pos:{x:-120, z: 80}, color:0xb5d4e0, accent:0x4a6c7c, w:16, d:14, h:7, type:'house' },
-  { id:'casa3', name:'Casa Moderna',    price:4500,  pos:{x:200, z: 110}, color:0xf2e6cf, accent:0x2a2a2a, w:18, d:16, h:8, type:'house' },
-  { id:'casa4', name:'Loft Centro',     price:7000,  pos:{x:-50, z: 250}, color:0x8d99ae, accent:0x2b2d42, w:14, d:18, h:11,type:'house' },
-  { id:'casa5', name:'Casa Playa',      price:12000, pos:{x:-280, z:-180}, color:0xfff8e8, accent:0x88b8d8, w:18, d:18, h:7, type:'house' },
-  { id:'casa6', name:'Penthouse Norte', price:25000, pos:{x:300, z:-280}, color:0x1a1a2e, accent:0xd4af37, w:18, d:18, h:14,type:'house' },
-  { id:'mansion',name:'🏛️ Mansión Augusto', price:75000, pos:{x:-330, z: 320}, color:0xfff5e6, accent:0xc9a227, w:32, d:28, h:12, type:'mansion' },
+  { id:'casa1', name:'Casa Suburbana',  price:1200,  pos:{x: 40, z:-70}, color:0xc89e6a, accent:0x6d4c3e, w:14, d:14, h:6, type:'house' },
+  { id:'casa2', name:'Casa Familiar',   price:2500,  pos:{x:-60, z: 35}, color:0xb5d4e0, accent:0x4a6c7c, w:16, d:14, h:7, type:'house' },
+  { id:'casa3', name:'Casa Moderna',    price:4500,  pos:{x: 75, z: 55}, color:0xf2e6cf, accent:0x2a2a2a, w:18, d:16, h:8, type:'house' },
+  { id:'casa4', name:'Loft Centro',     price:7000,  pos:{x:-30, z: 90}, color:0x8d99ae, accent:0x2b2d42, w:14, d:18, h:11,type:'house' },
+  { id:'casa5', name:'Casa Playa',      price:12000, pos:{x:-85, z:-65}, color:0xfff8e8, accent:0x88b8d8, w:18, d:18, h:7, type:'house' },
+  { id:'casa6', name:'Penthouse Norte', price:25000, pos:{x: 90, z:-90}, color:0x1a1a2e, accent:0xd4af37, w:18, d:18, h:14,type:'house' },
+  { id:'mansion',name:'🏛️ Mansión Augusto', price:75000, pos:{x:-90, z: 90}, color:0xfff5e6, accent:0xc9a227, w:32, d:28, h:12, type:'mansion' },
 ];
 
 const ownedProperties = (() => {
@@ -3381,29 +3700,22 @@ function makePropertyMesh(p) {
   const isMansion = p.type === 'mansion';
 
   // ── Front yard (lighter ground) ──
-  const yardGeo = new THREE.PlaneGeometry(p.w + 8, p.d + 8);
-  const yardMat = new THREE.MeshLambertMaterial({
-    color: isMansion ? 0xc8d8a8 : 0xa8c890,
-    polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3,
-  });
-  const yard = new THREE.Mesh(yardGeo, yardMat);
-  yard.rotation.x = -Math.PI/2;
-  yard.position.set(0, 0.10, 0);
+  // Built as a thin BoxGeometry, not a Plane → no z-fighting with road system
+  const yard = new THREE.Mesh(
+    new THREE.BoxGeometry(p.w + 8, 0.04, p.d + 8),
+    new THREE.MeshLambertMaterial({ color: isMansion ? 0xc8d8a8 : 0xa8c890 })
+  );
+  yard.position.set(0, 0.20, 0); // sits just above sidewalk curb (0.18)
   yard.receiveShadow = true;
-  yard.renderOrder = 3;
   g.add(yard);
 
-  // ── Driveway (gravel/concrete strip to entrance) ──
+  // ── Driveway ──
   const drive = new THREE.Mesh(
-    new THREE.PlaneGeometry(p.w * 0.35, p.d/2 + 4),
-    new THREE.MeshLambertMaterial({
-      color: 0x666666,
-      polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
-    })
+    new THREE.BoxGeometry(p.w * 0.35, 0.04, p.d/2 + 4),
+    new THREE.MeshLambertMaterial({ color: 0x666666 })
   );
-  drive.rotation.x = -Math.PI/2;
-  drive.position.set(0, 0.13, p.d/2 + 2);
-  drive.renderOrder = 4;
+  drive.position.set(0, 0.23, p.d/2 + 2);
+  drive.receiveShadow = true;
   g.add(drive);
 
   // ── Foundation (slightly larger base, dark) ──
