@@ -124,7 +124,6 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
 #xhair::before,#xhair::after {
   content:''; position:absolute; background:rgba(255,255,255,0.92);
 }
-/* Cross with a gap in the middle (more readable) */
 #xhair::before { width:2px; height:9px; left:50%; top:0; transform:translateX(-50%); }
 #xhair::after  { width:2px; height:9px; left:50%; bottom:0; transform:translateX(-50%); }
 .xhair-dot {
@@ -133,7 +132,6 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   border-radius:50%; transform:translate(-50%,-50%);
   box-shadow: 0 0 4px rgba(255,82,82,0.8);
 }
-/* Side ticks — gives it the proper crosshair feel */
 .xhair-tick {
   position:absolute; top:50%; width:9px; height:2px;
   background:rgba(255,255,255,0.92);
@@ -275,11 +273,8 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   transition:transform .08s, box-shadow .15s;
   animation:actionPulse 1.6s ease-in-out infinite;
 }
-/* Desktop layout: place above the minimap */
 @media (min-width: 769px) {
-  #btn-action {
-    bottom:140px; right:145px;
-  }
+  #btn-action { bottom:140px; right:145px; }
 }
 #btn-action:active { transform:scale(0.92); }
 #btn-action.exit {
@@ -371,34 +366,29 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
   .mobile-only  { display: block !important; }
-  /* Top-left name smaller */
   #name-tag {
     top: calc(8px + env(safe-area-inset-top, 0px));
     left: calc(10px + env(safe-area-inset-left, 0px));
     font-size:14px; letter-spacing:1px;
   }
-  /* Score moves to top-left under name (no minimap crowding) */
   #score-tag {
     top: calc(28px + env(safe-area-inset-top, 0px));
     left: calc(10px + env(safe-area-inset-left, 0px));
     right:auto;
     font-size:12px;
   }
-  /* Money under score */
   #money-tag {
     top: calc(46px + env(safe-area-inset-top, 0px));
     left: calc(10px + env(safe-area-inset-left, 0px));
     right:auto;
     font-size:12px;
   }
-  /* Wanted stars smaller, pinned top-right */
   #wanted-wrap {
     top: calc(8px + env(safe-area-inset-top, 0px));
     right: calc(10px + env(safe-area-inset-right, 0px));
   }
   #wanted-label { font-size:8px; }
   #wanted-stars { font-size:14px; letter-spacing:2px; }
-  /* Mission panel compact */
   #mission-panel {
     top: calc(54px + env(safe-area-inset-top, 0px));
     min-width:140px; max-width:80vw;
@@ -407,20 +397,17 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   #mission-header { font-size:8px; letter-spacing:1.5px; }
   #mission-title { font-size:11px; margin:1px 0; }
   #mission-progress { font-size:10px; }
-  /* Kill feed smaller */
   #kill-feed {
     top: calc(44px + env(safe-area-inset-top, 0px));
     right: calc(10px + env(safe-area-inset-right, 0px));
     font-size:10px;
   }
-  /* Health bar narrower, pushed up from joystick */
   #health-wrap {
     bottom: calc(200px + env(safe-area-inset-bottom, 0px));
     left: calc(10px + env(safe-area-inset-left, 0px));
   }
   #health-track { width:120px; height:11px; }
   #health-label { font-size:9px; }
-  /* Ammo top-right-ish, below wanted */
   #ammo-wrap {
     bottom:auto;
     top: calc(44px + env(safe-area-inset-top, 0px));
@@ -431,7 +418,6 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   }
   #weapon-name { font-size:10px; }
   #ammo-count { font-size:18px; }
-  /* Minimap smaller, bottom-right */
   #minimap-wrap {
     width:80px; height:80px;
     bottom: calc(10px + env(safe-area-inset-bottom, 0px));
@@ -439,7 +425,6 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   }
   #minimap-border { width:80px; height:80px; }
   #minimap-canvas { width:80px; height:80px; }
-  /* Joystick: bottom-left, offset so health fits above */
   #joystick-zone {
     bottom: calc(40px + env(safe-area-inset-bottom, 0px));
     left: calc(18px + env(safe-area-inset-left, 0px));
@@ -447,43 +432,35 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   }
   #js-base { width:100px; height:100px; }
   #js-knob { width:40px; height:40px; }
-  /* Shoot button bigger but spaced */
   #btn-shoot {
     bottom: calc(40px + env(safe-area-inset-bottom, 0px));
     right: calc(100px + env(safe-area-inset-right, 0px));
     width:72px; height:72px;
     font-size:26px;
   }
-  /* Sprint above shoot */
   #btn-sprint {
     bottom: calc(130px + env(safe-area-inset-bottom, 0px));
     right: calc(108px + env(safe-area-inset-right, 0px));
     width:52px; height:52px;
     font-size:18px;
   }
-  /* Action button (enter car) — stack above sprint */
   #btn-action {
     bottom: calc(200px + env(safe-area-inset-bottom, 0px));
     right: calc(110px + env(safe-area-inset-right, 0px));
     width:58px; height:58px;
     font-size:22px;
   }
-  /* Hide desktop hint */
   #hint { display:none; }
-  /* Crosshair dot a bit smaller */
   #xhair { width:18px; height:18px; }
-  /* Start screen more compact */
   .start-title { font-size:36px !important; }
   .start-sub { font-size:14px !important; }
   .start-controls { font-size:12px !important; }
   #btn-play { font-size:18px !important; padding:12px 32px !important; }
-  /* Game-over more compact */
   .go-title { font-size:36px !important; }
   .go-sub { font-size:14px !important; }
   .go-score { font-size:22px !important; }
   #btn-retry { font-size:16px !important; padding:12px 28px !important; }
 }
-/* Very small phones: shrink further */
 @media (max-width: 380px) {
   #health-track { width:100px; }
   #joystick-zone, #js-base { width:90px; height:90px; }
@@ -497,7 +474,6 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
 
 <canvas id="c"></canvas>
 
-<!-- HUD -->
 <div id="hud">
   <div id="name-tag">⚡ AUGUSTO</div>
   <div id="score-tag">PUNTOS: <span id="score-val">0</span></div>
@@ -530,7 +506,6 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   <div id="hint">WASD mover/conducir · Mouse cámara · Clic disparar · E auto/recoger · Shift correr</div>
 </div>
 
-<!-- Mobile Controls -->
 <div id="mob-controls">
   <div id="joystick-zone">
     <div id="js-base"><div id="js-knob"></div></div>
@@ -539,16 +514,13 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   <div id="btn-sprint">⚡</div>
 </div>
 
-<!-- Context action button (enter/exit vehicle) - visible on both mobile and desktop when relevant -->
 <div id="btn-action">
   <span id="btn-action-icon">🚗</span>
   <span class="label" id="btn-action-label">SUBIR</span>
 </div>
 
-<!-- Damage flash -->
 <div id="dmg-flash"></div>
 
-<!-- Property prompt (shown near a property portal) -->
 <div id="property-prompt">
   <div class="pp-title" id="pp-title">CASA</div>
   <div class="pp-status" id="pp-status">A la venta</div>
@@ -556,13 +528,11 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   <div class="pp-action" id="pp-action">Pulsa <b>B</b> para comprar</div>
 </div>
 
-<!-- Property purchase toast -->
 <div id="purchase-toast">
   <div class="pt-title">🏡 ¡PROPIEDAD COMPRADA!</div>
   <div class="pt-name" id="pt-name"></div>
 </div>
 
-<!-- Start Screen -->
 <div id="start-screen">
   <div class="start-title">AUGUSTO CITY</div>
   <div class="start-sub">Open World · San Andreas Style</div>
@@ -584,7 +554,6 @@ body { overflow:hidden; background:#000; font-family:'Segoe UI',sans-serif; touc
   <button id="btn-play" onclick="startGame()">JUGAR</button>
 </div>
 
-<!-- Game Over -->
 <div id="gameover-screen">
   <div class="go-title">GAME OVER</div>
   <div class="go-sub">Augusto cayó en las calles...</div>
@@ -603,56 +572,52 @@ let renderer, scene, camera, clock;
 let gameRunning = false;
 let playerDead = false;
 
-const WORLD = 115; // half-size
+const WORLD = 115;
 const MAP_SCALE = 110 / (WORLD * 2);
 
-// ─── Input ───
 const KEYS = {};
 let pointerLocked = false;
 
-// ─── Player state ───
+// MODIFICADO: Arma por defecto y munición inicial
 const pState = {
   pos:     new THREE.Vector3(5, 0, 5),
   vel:     new THREE.Vector3(),
-  rot:     0,       // facing angle (Y)
+  rot:     0,       
   health:  100,
-  weapon:  null,    // 'pistol'|'rifle'|'shotgun'
-  ammo:    0,
+  weapon:  'pistol',
+  ammo:    50,
   score:   0,
-  money:   1000000, // starting cash
+  money:   1000000, 
   wanted:  0,
   wantedT: 0,
   shootCooldown: 0,
   sprint:  false,
   alive:   true,
-  inMansion: false  // true while inside mansion interior
+  inMansion: false  
 };
 
-// ─── Camera orbit ───
 const CAM = {
-  theta:  0,        // horizontal
-  phi:    0.55,     // vertical
+  theta:  0,        
+  phi:    0.55,     
   dist:   9,
-  lx: 0, ly: 0     // lerp targets
+  lx: 0, ly: 0     
 };
 
-// ─── Three.js objects ───
 let playerGroup;
-let legL, legR, armL, armR; // animated bones
+let legL, legR, armL, armR; 
 let playerWeaponMesh = null;
 
-const buildings = [];   // {minX,maxX,minZ,maxZ}
+const buildings = [];   
 const enemies   = [];
 const pickups   = [];
 const bullets   = [];
 const particles = [];
 const feedMsgs  = [];
-const vehicles  = [];   // parked cars (also collision)
+const vehicles  = [];   
 const police    = [];
 let policeSpawnT = 0;
-let driving     = null; // current vehicle being driven (or null)
+let driving     = null; 
 
-// ─── Mobile input ───
 const JOY = { active:false, x:0, y:0, tid:null, bx:0, by:0 };
 let   camTouch = null;
 let   mobileSprint = false;
@@ -670,15 +635,12 @@ function init() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  // No tone mapping + linear output: with this Lambert/Phong pipeline,
-  // sRGB encoding was making procedural canvas textures look washed out.
   renderer.outputEncoding = THREE.LinearEncoding;
   renderer.toneMapping = THREE.NoToneMapping;
 
   scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0xa8c8e8, 0.0045);
 
-  // Vertical-gradient sky
   const skyGeo = new THREE.SphereGeometry(700, 32, 16);
   const skyCanvas = document.createElement('canvas');
   skyCanvas.width = 64; skyCanvas.height = 256;
@@ -698,7 +660,6 @@ function init() {
 
   renderer.setClearColor(0xa8c8e8);
 
-  // Larger near + smaller far for better z-precision (kills the road flicker)
   camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.5, 900);
   clock  = new THREE.Clock(false);
 
@@ -728,8 +689,6 @@ function init() {
 ═══════════════════════════════════════════════════ */
 function buildLights() {
   scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-
-  // Main sun (warm, casts shadows)
   const sun = new THREE.DirectionalLight(0xfff4d6, 1.15);
   sun.position.set(60, 100, 40);
   sun.castShadow = true;
@@ -744,12 +703,9 @@ function buildLights() {
   scene.add(sun.target);
   window.__sunLight = sun;
 
-  // Cool fill from the opposite side (rim light, no shadows)
   const fill = new THREE.DirectionalLight(0x88aacc, 0.35);
   fill.position.set(-50, 60, -30);
   scene.add(fill);
-
-  // Hemisphere for sky/ground bounce
   scene.add(new THREE.HemisphereLight(0xb0d4ee, 0x554433, 0.5));
 }
 
@@ -770,17 +726,14 @@ function makeTex(w, h, drawFn, repeatX=1, repeatY=1) {
 }
 
 function buildTextures() {
-  // Asphalt
   TEX.asphalt = makeTex(256, 256, ctx => {
     ctx.fillStyle = '#2a2a2a';
     ctx.fillRect(0, 0, 256, 256);
-    // Noise
     for (let i = 0; i < 2000; i++) {
       const shade = 20 + Math.random() * 40;
       ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
       ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
     }
-    // Cracks
     ctx.strokeStyle = '#181818';
     ctx.lineWidth = 1;
     for (let i = 0; i < 12; i++) {
@@ -791,7 +744,6 @@ function buildTextures() {
     }
   }, 1, 1);
 
-  // Road with center line
   TEX.roadH = makeTex(512, 128, ctx => {
     ctx.fillStyle = '#1f1f1f';
     ctx.fillRect(0, 0, 512, 128);
@@ -800,28 +752,23 @@ function buildTextures() {
       ctx.fillStyle = `rgb(${s},${s},${s})`;
       ctx.fillRect(Math.random()*512, Math.random()*128, 1.5, 1.5);
     }
-    // Side lines (solid white)
     ctx.fillStyle = '#f0f0e0';
     ctx.fillRect(0, 4, 512, 3);
     ctx.fillRect(0, 121, 512, 3);
-    // Center dashed yellow
     ctx.fillStyle = '#FFD700';
     for (let x = 0; x < 512; x += 48) {
       ctx.fillRect(x, 61, 28, 6);
     }
   });
 
-  // Sidewalk tiles
   TEX.sidewalk = makeTex(128, 128, ctx => {
     ctx.fillStyle = '#8e8e8e';
     ctx.fillRect(0, 0, 128, 128);
-    // Noise
     for (let i = 0; i < 800; i++) {
       const s = 110 + Math.random() * 40;
       ctx.fillStyle = `rgb(${s},${s},${s})`;
       ctx.fillRect(Math.random()*128, Math.random()*128, 1.5, 1.5);
     }
-    // Tile lines
     ctx.strokeStyle = '#666';
     ctx.lineWidth = 2;
     for (let i = 0; i < 128; i += 32) {
@@ -830,7 +777,6 @@ function buildTextures() {
     }
   });
 
-  // Grass
   TEX.grass = makeTex(128, 128, ctx => {
     ctx.fillStyle = '#3a5f2a';
     ctx.fillRect(0, 0, 128, 128);
@@ -844,24 +790,20 @@ function buildTextures() {
 
 function makeBuildingTex(baseColor, w=128, h=256, winCols=4, winRows=8) {
   return makeTex(w, h, ctx => {
-    // Base wall with gradient
     const c = new THREE.Color(baseColor);
     const r = Math.floor(c.r * 255), g = Math.floor(c.g * 255), b = Math.floor(c.b * 255);
     ctx.fillStyle = `rgb(${r},${g},${b})`;
     ctx.fillRect(0, 0, w, h);
-    // Brick/panel texture
     for (let i = 0; i < 400; i++) {
       const d = -15 + Math.random() * 30;
       ctx.fillStyle = `rgb(${r+d},${g+d},${b+d})`;
       ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2);
     }
-    // Horizontal floor lines
     ctx.strokeStyle = `rgb(${Math.max(0,r-25)},${Math.max(0,g-25)},${Math.max(0,b-25)})`;
     ctx.lineWidth = 1;
     for (let y = h/winRows; y < h; y += h/winRows) {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
     }
-    // Windows
     const wW = w/winCols, wH = h/winRows;
     for (let row = 0; row < winRows; row++) {
       for (let col = 0; col < winCols; col++) {
@@ -869,10 +811,8 @@ function makeBuildingTex(baseColor, w=128, h=256, winCols=4, winRows=8) {
         const wy = row * wH + wH * 0.2;
         const ww = wW * 0.5;
         const wh = wH * 0.55;
-        // Window frame (dark)
         ctx.fillStyle = '#111';
         ctx.fillRect(wx-2, wy-2, ww+4, wh+4);
-        // Glass (lit or not)
         const lit = Math.random() > 0.35;
         if (lit) {
           const gl = ctx.createLinearGradient(wx, wy, wx, wy+wh);
@@ -883,7 +823,6 @@ function makeBuildingTex(baseColor, w=128, h=256, winCols=4, winRows=8) {
           ctx.fillStyle = '#1a2a4a';
         }
         ctx.fillRect(wx, wy, ww, wh);
-        // Reflection highlight
         if (lit) {
           ctx.fillStyle = 'rgba(255,255,255,0.25)';
           ctx.fillRect(wx+2, wy+2, ww*0.3, wh*0.25);
@@ -899,7 +838,6 @@ function makeBuildingTex(baseColor, w=128, h=256, winCols=4, winRows=8) {
 function buildWorld() {
   buildTextures();
 
-  // Ground (grass) — sits a hair below the road system so road boxes cap it cleanly
   const gTex = TEX.grass.clone();
   gTex.needsUpdate = true;
   gTex.repeat.set(60, 60);
@@ -912,17 +850,8 @@ function buildWorld() {
   gnd.receiveShadow = true;
   scene.add(gnd);
 
-  // ─── Procedural road grid ───
-  // ─── Roads & sidewalks: all merged into a single mesh per layer ───
-  // Plain colored boxes, no textures, no coplanar overlap. The grid is built
-  // by drawing road STRIPS (asphalt rectangles) — at each crossing, the strip
-  // already covers it because rectangles overlap geometrically. We then add
-  // painted lines as separate, slightly elevated meshes only on the long
-  // segments between crossings (so painted lines never cross each other).
   buildRoadSystem();
 
-  // ─── Procedural buildings ───
-  // For each block (between main avenues), drop 4-8 buildings avoiding roads
   const palette = [
     0x5D4037, 0x455A64, 0x795548, 0x9E9E9E, 0x37474F, 0x2E7D32,
     0xBF360C, 0x4A148C, 0x1565C0, 0x263238, 0xAD1457, 0x00695C,
@@ -930,8 +859,7 @@ function buildWorld() {
     0x004D40, 0x880E4F, 0x1B5E20, 0xC62828, 0x6A1B9A, 0xE65100,
   ];
   const isOnRoad = (x, z, w, d) => {
-    // Check if box overlaps a road grid line
-    const half = 9; // road half-width worst case
+    const half = 9;
     for (let rx = -WORLD; rx <= WORLD; rx += 50) {
       if (Math.abs(x - rx) < (w/2 + half + 4)) return true;
     }
@@ -940,7 +868,7 @@ function buildWorld() {
     }
     return false;
   };
-  const occupied = []; // {x,z,w,d}
+  const occupied = [];
   const overlapsOccupied = (x, z, w, d) => {
     for (const o of occupied) {
       if (Math.abs(x - o.x) < (w/2 + o.w/2 + 3) &&
@@ -966,7 +894,6 @@ function buildWorld() {
     placed++;
   }
 
-  // ─── Trees scattered ───
   let treesPlaced = 0;
   for (let i = 0; i < 200 && treesPlaced < 60; i++) {
     const x = (Math.random() - 0.5) * (WORLD*2 - 30);
@@ -977,14 +904,12 @@ function buildWorld() {
     treesPlaced++;
   }
 
-  // ─── Street lamps along main avenues ───
   for (let x = -WORLD + 50; x < WORLD; x += 50) {
     for (let z = -WORLD + 50; z < WORLD; z += 100) {
       if (Math.abs(x) > 4 && Math.abs(z) > 4) makeLamp(x + 11, z);
     }
   }
 
-  // ─── Parked vehicles (procedural) ───
   const carColors = [0xB71C1C, 0x1565C0, 0xF9A825, 0x2E7D32, 0x6A1B9A,
                      0xE65100, 0x37474F, 0xC62828, 0x00838F, 0xFFEB3B,
                      0x4A148C, 0x795548, 0x388E3C, 0x9E9E9E, 0xAD1457,
@@ -1015,14 +940,12 @@ function buildWorld() {
     }
   }
 
-  // ─── Properties (real-estate system) ───
   if (typeof spawnProperties === 'function') spawnProperties(occupied);
 }
 
 /* ═══════════════════════════════════════════════════
    VEHICLES
 ═══════════════════════════════════════════════════ */
-// Shared vehicle geometries / materials cache (reduces GPU memory + draw calls)
 const VEH_CACHE = {};
 function vehGeo(key, fn) { return VEH_CACHE[key] || (VEH_CACHE[key] = fn()); }
 
@@ -1034,34 +957,29 @@ function makeVehicle(x, z, rot, color, type) {
   const isSport = type === 'sport';
   const isSUV   = type === 'suv';
 
-  // Body profile
   let bodyL, bodyW, bodyH, hoodL, trunkL, cabinL, cabinH, cabinXOff;
   if (isSport)      { bodyL=4.4; bodyW=1.95; bodyH=0.55; hoodL=1.3; trunkL=1.0; cabinL=1.7; cabinH=0.55; cabinXOff=-0.05; }
   else if (isSUV)   { bodyL=4.5; bodyW=2.0;  bodyH=0.85; hoodL=1.2; trunkL=0.9; cabinL=2.0; cabinH=0.85; cabinXOff=-0.1; }
   else if (isTruck) { bodyL=5.4; bodyW=2.15; bodyH=0.85; hoodL=1.4; trunkL=2.6; cabinL=1.6; cabinH=0.95; cabinXOff=-0.5; }
   else              { bodyL=4.4; bodyW=1.9;  bodyH=0.7;  hoodL=1.2; trunkL=1.0; cabinL=1.85;cabinH=0.7;  cabinXOff=-0.05; }
 
-  // Materials — Phong with no specular crush, brighter pop
   const bodyMat   = new THREE.MeshPhongMaterial({ color, shininess:80, specular:0x444444 });
   const trimMat   = new THREE.MeshPhongMaterial({ color:0x111111, shininess:30 });
   const winMat    = new THREE.MeshPhongMaterial({ color:0x223040, shininess:140, specular:0x6688aa, transparent:true, opacity:0.85 });
 
   const wheelR = isSUV ? 0.42 : isTruck ? 0.46 : isSport ? 0.36 : 0.38;
-  const groundY = wheelR; // chassis sits on top of wheels
+  const groundY = wheelR; 
 
-  // ── Chassis (lower body block) ──
   const chassis = new THREE.Mesh(new THREE.BoxGeometry(bodyL, bodyH, bodyW), bodyMat);
   chassis.position.y = groundY + bodyH/2;
   chassis.castShadow = chassis.receiveShadow = true;
   g.add(chassis);
 
-  // ── Hood (raised lip in front so it reads as 3D) ──
   const hood = new THREE.Mesh(new THREE.BoxGeometry(hoodL, 0.18, bodyW*0.92), bodyMat);
   hood.position.set(bodyL/2 - hoodL/2, groundY + bodyH + 0.09, 0);
   hood.castShadow = true;
   g.add(hood);
 
-  // ── Trunk (only if not truck) ──
   if (!isTruck) {
     const trunk = new THREE.Mesh(new THREE.BoxGeometry(trunkL, 0.16, bodyW*0.92), bodyMat);
     trunk.position.set(-bodyL/2 + trunkL/2, groundY + bodyH + 0.08, 0);
@@ -1069,14 +987,12 @@ function makeVehicle(x, z, rot, color, type) {
     g.add(trunk);
   }
 
-  // ── Cabin (lower box just under the windows) — narrower than chassis ──
   const cabinW = bodyW * 0.92;
   const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinL, cabinH*0.40, cabinW), bodyMat);
   cabin.position.set(cabinXOff, groundY + bodyH + cabinH*0.20, 0);
   cabin.castShadow = true;
   g.add(cabin);
 
-  // ── Glass band (continuous around the cabin, slightly inset) ──
   const glass = new THREE.Mesh(
     new THREE.BoxGeometry(cabinL*0.95, cabinH*0.45, cabinW*0.99),
     winMat
@@ -1084,7 +1000,6 @@ function makeVehicle(x, z, rot, color, type) {
   glass.position.set(cabinXOff, groundY + bodyH + cabinH*0.62, 0);
   g.add(glass);
 
-  // ── Roof ── tapered narrower than cabin (shape definition)
   const roofW = cabinW * 0.85;
   const roofL = cabinL * 0.85;
   const roof = new THREE.Mesh(
@@ -1095,7 +1010,6 @@ function makeVehicle(x, z, rot, color, type) {
   roof.castShadow = true;
   g.add(roof);
 
-  // ── B-pillars (each side, between front and rear windows) ──
   [-1, 1].forEach(side => {
     const pillar = new THREE.Mesh(
       new THREE.BoxGeometry(0.08, cabinH*0.45, 0.06),
@@ -1105,7 +1019,6 @@ function makeVehicle(x, z, rot, color, type) {
     g.add(pillar);
   });
 
-  // ── A-pillars and C-pillars at the corners ──
   [-1, 1].forEach(side => {
     [cabinXOff + cabinL*0.45, cabinXOff - cabinL*0.45].forEach(xp => {
       const post = new THREE.Mesh(
@@ -1117,7 +1030,6 @@ function makeVehicle(x, z, rot, color, type) {
     });
   });
 
-  // ── Truck cargo bed ──
   if (isTruck) {
     const bed = new THREE.Mesh(
       new THREE.BoxGeometry(2.4, 0.5, bodyW*0.95),
@@ -1128,14 +1040,13 @@ function makeVehicle(x, z, rot, color, type) {
     g.add(bed);
   }
 
-  // ── Front grille + bumper ──
   const grille = new THREE.Mesh(
     new THREE.BoxGeometry(0.06, bodyH*0.6, bodyW*0.6),
     new THREE.MeshPhongMaterial({ color:0x1a1a1a, shininess:90 })
   );
   grille.position.set(bodyL/2 + 0.04, groundY + bodyH*0.45, 0);
   g.add(grille);
-  // Chrome strip across the grille
+
   const chromeMat = new THREE.MeshPhongMaterial({ color:0xdddddd, shininess:160, specular:0xaaaaaa });
   const chromeStrip = new THREE.Mesh(
     new THREE.BoxGeometry(0.04, 0.04, bodyW*0.55),
@@ -1144,7 +1055,6 @@ function makeVehicle(x, z, rot, color, type) {
   chromeStrip.position.set(bodyL/2 + 0.06, groundY + bodyH*0.55, 0);
   g.add(chromeStrip);
 
-  // ── Door handles ──
   [-1, 1].forEach(side => {
     const handle = new THREE.Mesh(
       new THREE.BoxGeometry(0.16, 0.04, 0.025),
@@ -1154,7 +1064,6 @@ function makeVehicle(x, z, rot, color, type) {
     g.add(handle);
   });
 
-  // ── Side mirrors ──
   [-1, 1].forEach(side => {
     const mirror = new THREE.Mesh(
       new THREE.BoxGeometry(0.12, 0.08, 0.10),
@@ -1171,7 +1080,6 @@ function makeVehicle(x, z, rot, color, type) {
   rbump.position.set(-bodyL/2 - 0.05, groundY + 0.12, 0);
   g.add(rbump);
 
-  // ── Headlights (single combined mesh per side) ──
   const headLightMat = new THREE.MeshBasicMaterial({ color:0xfff0c0 });
   [-1, 1].forEach(side => {
     const hl = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.4), headLightMat);
@@ -1179,7 +1087,6 @@ function makeVehicle(x, z, rot, color, type) {
     g.add(hl);
   });
 
-  // ── Taillights ──
   const tailMat = new THREE.MeshBasicMaterial({ color:0xff2222 });
   [-1, 1].forEach(side => {
     const tl = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.36), tailMat);
@@ -1187,7 +1094,6 @@ function makeVehicle(x, z, rot, color, type) {
     g.add(tl);
   });
 
-  // ── Wheels: tire + rim only, no separate hub/arch (saves 4 meshes/car) ──
   const tireGeo = vehGeo('tire_'+wheelR, () => new THREE.CylinderGeometry(wheelR, wheelR, 0.3, 14));
   const rimGeo  = vehGeo('rim_'+wheelR,  () => new THREE.CylinderGeometry(wheelR*0.55, wheelR*0.55, 0.32, 8));
   const tireMat = new THREE.MeshLambertMaterial({ color:0x111111 });
@@ -1210,7 +1116,6 @@ function makeVehicle(x, z, rot, color, type) {
       g.add(rim);
       wheelRefs.push(rim);
 
-      // Wheel arch (small dark fender lip above the wheel)
       const arch = new THREE.Mesh(
         new THREE.BoxGeometry(wheelR*2.3, 0.05, 0.05),
         trimMat
@@ -1220,7 +1125,6 @@ function makeVehicle(x, z, rot, color, type) {
     });
   });
 
-  // ── Taxi sign ── single emissive box
   if (isTaxi) {
     const sign = new THREE.Mesh(
       new THREE.BoxGeometry(0.85, 0.28, 0.4),
@@ -1230,7 +1134,6 @@ function makeVehicle(x, z, rot, color, type) {
     g.add(sign);
   }
 
-  // ── Sport spoiler ──
   if (isSport) {
     const spoiler = new THREE.Mesh(
       new THREE.BoxGeometry(0.15, 0.1, bodyW*0.8),
@@ -1249,8 +1152,6 @@ function makeVehicle(x, z, rot, color, type) {
   g.rotation.y = rot;
   scene.add(g);
 
-  // Collision: use a square AABB sized by the longest dimension so it remains
-  // valid as the vehicle rotates while being driven.
   const half = bodyL / 2 + 0.15;
   const colliderIdx = buildings.length;
   buildings.push({
@@ -1287,7 +1188,6 @@ function findNearbyVehicle() {
 function enterVehicle(veh) {
   driving = veh;
   playerGroup.visible = false;
-  // Disable own collider while driving
   const b = buildings[veh.colliderIdx];
   b._savedHalf = (b.maxX - b.minX) / 2;
   b.minX = b.maxX = b.minZ = b.maxZ = 99999;
@@ -1298,7 +1198,6 @@ function exitVehicle() {
   if (!driving) return;
   const veh = driving;
 
-  // Place Augusto next to the car (left of forward)
   const fx = Math.cos(veh.heading);
   const fz = -Math.sin(veh.heading);
   const lx = -fz, lz = fx;
@@ -1310,7 +1209,6 @@ function exitVehicle() {
 
   playerGroup.visible = true;
 
-  // Restore collider at current vehicle position
   const b = buildings[veh.colliderIdx];
   const h = b._savedHalf || (veh.bodyL / 2 + 0.15);
   b.minX = veh.group.position.x - h;
@@ -1364,7 +1262,7 @@ function updateDriving(dt) {
   const nz = v.group.position.z + fz * v.speed * dt;
 
   const rp = resolvePos(nx, nz);
-  if (rp.x !== nx || rp.z !== nz) v.speed *= 0.35;  // crash damping
+  if (rp.x !== nx || rp.z !== nz) v.speed *= 0.35; 
 
   v.group.position.x = rp.x;
   v.group.position.z = rp.z;
@@ -1373,7 +1271,6 @@ function updateDriving(dt) {
   pState.pos.x = rp.x;
   pState.pos.z = rp.z;
 
-  // Wheel spin
   const spin = v.speed * dt * 2.5;
   v.wheels.forEach(w => { w.rotation.y -= spin; });
 
@@ -1383,32 +1280,23 @@ function updateDriving(dt) {
   }
 }
 
-/* Build the entire road network as a few solid 3D meshes with thickness.
- * Asphalt = thin BoxGeometry strips at y=0..0.05 (no Plane → no coplanar issues).
- * Sidewalks = box strips at y=0..0.18 (raised curb, no z-fight against road).
- * Painted lines = MeshBasicMaterial planes at y=0.06, ONLY along segments
- * between intersections (lines never cross each other).
- */
 function buildRoadSystem() {
   const asphaltMat = new THREE.MeshLambertMaterial({ color: 0x2a2a30 });
   const sidewalkMat = new THREE.MeshLambertMaterial({ color: 0x9ea0a3 });
-  const lineMat = new THREE.MeshBasicMaterial({ color: 0xfaf2c8 }); // warm cream, not pure white
+  const lineMat = new THREE.MeshBasicMaterial({ color: 0xfaf2c8 }); 
 
   const GRID_STEP = 100;
-  const MAIN_W = 12;          // main avenue width
-  const SEC_W  = 8;           // secondary street width
-  const SW_W   = 3;           // sidewalk width
-  const ROAD_H = 0.05;        // road box thickness (just above ground)
-  const CURB_H = 0.18;        // sidewalk thickness (raised curb)
+  const MAIN_W = 12;          
+  const SEC_W  = 8;           
+  const SW_W   = 3;           
+  const ROAD_H = 0.05;        
+  const CURB_H = 0.18;        
 
-  // Collect main + secondary axes (used for both H and V)
   const mainAxes = [];
   for (let x = -WORLD; x <= WORLD; x += GRID_STEP) mainAxes.push(x);
   const allAxes = [...mainAxes];
   for (let x = -WORLD + 50; x < WORLD; x += GRID_STEP) allAxes.push(x);
 
-  // ── ASPHALT STRIPS (3D boxes, not planes) ──
-  // Vertical strips
   allAxes.forEach(x => {
     const w = mainAxes.includes(x) ? MAIN_W : SEC_W;
     const m = new THREE.Mesh(
@@ -1419,7 +1307,6 @@ function buildRoadSystem() {
     m.receiveShadow = true;
     scene.add(m);
   });
-  // Horizontal strips
   allAxes.forEach(z => {
     const w = mainAxes.includes(z) ? MAIN_W : SEC_W;
     const m = new THREE.Mesh(
@@ -1431,9 +1318,6 @@ function buildRoadSystem() {
     scene.add(m);
   });
 
-  // ── SIDEWALKS (3D raised boxes along main avenues only) ──
-  // For each main avenue, build sidewalks broken at every cross-axis (so
-  // pedestrians/players can step from sidewalk → crosswalk → sidewalk).
   function addSidewalkSegments(perpStart, perpEnd, axisVal, isVertical) {
     const breaks = [...allAxes].sort((a,b) => a-b);
     let prev = perpStart;
@@ -1471,7 +1355,6 @@ function buildRoadSystem() {
       scene.add(m);
     }
   }
-  // Sidewalks flanking each main avenue (both sides)
   mainAxes.forEach(x => {
     addSidewalkSegments(-WORLD, WORLD, x + MAIN_W/2 + SW_W/2, true);
     addSidewalkSegments(-WORLD, WORLD, x - MAIN_W/2 - SW_W/2, true);
@@ -1481,12 +1364,9 @@ function buildRoadSystem() {
     addSidewalkSegments(-WORLD, WORLD, z - MAIN_W/2 - SW_W/2, false);
   });
 
-  // ── PAINTED LINES (only between intersections) ──
-  // Center dashed line on each main avenue segment
   function addCenterLineSegment(start, end, axisVal, isVertical) {
     const len = end - start;
     if (len < 4) return;
-    // dashed: 2.5m line, 2m gap
     const dashL = 2.5, gapL = 2.0;
     const stride = dashL + gapL;
     const count = Math.floor(len / stride);
@@ -1504,7 +1384,6 @@ function buildRoadSystem() {
       scene.add(m);
     }
   }
-  // For each MAIN avenue, add center lines between every consecutive cross-axis
   mainAxes.forEach(x => {
     const sortedZ = [...allAxes].sort((a,b) => a-b);
     let prev = -WORLD;
@@ -1528,7 +1407,6 @@ function buildRoadSystem() {
 }
 
 function makeBuilding(x, z, w, d, h, color) {
-  // Procedural texture with windows for sides
   const cols = Math.max(2, Math.floor(w/4));
   const rows = Math.max(3, Math.floor(h/4));
   const sideTex = makeBuildingTex(color, 128, 256, cols, rows);
@@ -1536,7 +1414,6 @@ function makeBuilding(x, z, w, d, h, color) {
   const topMat = new THREE.MeshLambertMaterial({ color:0x2a2a2a });
   const sideMat = new THREE.MeshLambertMaterial({ map: sideTex });
 
-  // Different UV scale for different faces - use same material set
   const mats = [sideMat, sideMat, topMat, topMat, sideMat, sideMat];
 
   const geo = new THREE.BoxGeometry(w, h, d);
@@ -1545,7 +1422,6 @@ function makeBuilding(x, z, w, d, h, color) {
   mesh.castShadow = mesh.receiveShadow = true;
   scene.add(mesh);
 
-  // Rooftop trim
   const rMesh = new THREE.Mesh(
     new THREE.BoxGeometry(w*1.02, 0.6, d*1.02),
     new THREE.MeshLambertMaterial({ color:0x1a1a1a })
@@ -1554,7 +1430,6 @@ function makeBuilding(x, z, w, d, h, color) {
   rMesh.castShadow = true;
   scene.add(rMesh);
 
-  // AC unit / ventilation on rooftop
   if (w > 14 && d > 14) {
     const ac = new THREE.Mesh(
       new THREE.BoxGeometry(2.5, 1.2, 2),
@@ -1565,7 +1440,6 @@ function makeBuilding(x, z, w, d, h, color) {
     scene.add(ac);
   }
 
-  // Collision AABB
   buildings.push({ minX:x-w/2, maxX:x+w/2, minZ:z-d/2, maxZ:z+d/2 });
 }
 
@@ -1615,28 +1489,25 @@ function makeLamp(x, z) {
 function buildPlayer() {
   playerGroup = new THREE.Group();
 
-  // Material palette — slightly warmer, more saturated
   const skinMat   = new THREE.MeshLambertMaterial({ color: 0xd9a577 });
   const shirtMat  = new THREE.MeshLambertMaterial({ color: 0x1976d2 });
-  const shirtMat2 = new THREE.MeshLambertMaterial({ color: 0x0d47a1 }); // darker accent
+  const shirtMat2 = new THREE.MeshLambertMaterial({ color: 0x0d47a1 }); 
   const pantsMat  = new THREE.MeshLambertMaterial({ color: 0x1a237e });
-  const pantsMat2 = new THREE.MeshLambertMaterial({ color: 0x0d1442 }); // belt/cuffs
+  const pantsMat2 = new THREE.MeshLambertMaterial({ color: 0x0d1442 }); 
   const hatMat    = new THREE.MeshLambertMaterial({ color: 0xc62828 });
   const shoeMat   = new THREE.MeshLambertMaterial({ color: 0x111111 });
   const soleMat   = new THREE.MeshLambertMaterial({ color: 0xffffff });
   const hairMat   = new THREE.MeshLambertMaterial({ color: 0x2a1808 });
 
-  // ── TORSO ── rounded cylinder (chest wider than waist done via top/bottom radii)
   const torso = new THREE.Mesh(
     new THREE.CylinderGeometry(0.30, 0.36, 0.7, 16),
     shirtMat
   );
-  torso.scale.set(1.2, 1, 0.78); // squash front-back so it reads as a chest, not a barrel
+  torso.scale.set(1.2, 1, 0.78); 
   torso.position.y = 1.15;
   torso.castShadow = true;
   playerGroup.add(torso);
 
-  // Shirt hem (rounded band)
   const hem = new THREE.Mesh(
     new THREE.CylinderGeometry(0.39, 0.39, 0.1, 16),
     shirtMat2
@@ -1645,12 +1516,10 @@ function buildPlayer() {
   hem.position.y = 0.81;
   playerGroup.add(hem);
 
-  // Chest accent stripe (vertical band)
   const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.65, 0.02), shirtMat2);
   stripe.position.set(0, 1.18, 0.22);
   playerGroup.add(stripe);
 
-  // ── BELT ── (rounded)
   const belt = new THREE.Mesh(
     new THREE.CylinderGeometry(0.39, 0.39, 0.08, 16),
     pantsMat2
@@ -1658,7 +1527,6 @@ function buildPlayer() {
   belt.scale.set(1.2, 1, 0.78);
   belt.position.y = 0.78;
   playerGroup.add(belt);
-  // Buckle
   const buckle = new THREE.Mesh(
     new THREE.BoxGeometry(0.1, 0.08, 0.025),
     new THREE.MeshLambertMaterial({ color: 0xddc070 })
@@ -1666,20 +1534,17 @@ function buildPlayer() {
   buckle.position.set(0, 0.78, 0.30);
   playerGroup.add(buckle);
 
-  // ── NECK ──
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.14, 0.16, 10), skinMat);
   neck.position.y = 1.58;
   neck.castShadow = true;
   playerGroup.add(neck);
 
-  // ── HEAD ── sphere with vertical squash for human-ish proportion
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 16, 14), skinMat);
   head.scale.set(1.0, 1.05, 0.95);
   head.position.y = 1.95;
   head.castShadow = true;
   playerGroup.add(head);
 
-  // ── HAIR ── dome on top of the head (half-sphere)
   const hairTop = new THREE.Mesh(
     new THREE.SphereGeometry(0.27, 16, 12, 0, Math.PI*2, 0, Math.PI*0.55),
     hairMat
@@ -1687,7 +1552,6 @@ function buildPlayer() {
   hairTop.scale.set(1.0, 0.95, 0.95);
   hairTop.position.y = 2.04;
   playerGroup.add(hairTop);
-  // Sideburns
   [-1, 1].forEach(side => {
     const sb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), hairMat);
     sb.scale.set(0.6, 1.6, 1.2);
@@ -1695,7 +1559,6 @@ function buildPlayer() {
     playerGroup.add(sb);
   });
 
-  // ── BANDANA / red headband ── (torus around head)
   const bandana = new THREE.Mesh(
     new THREE.TorusGeometry(0.26, 0.05, 8, 20),
     hatMat
@@ -1705,13 +1568,11 @@ function buildPlayer() {
   bandana.position.y = 2.04;
   playerGroup.add(bandana);
 
-  // ── FACE (facing +Z local) ──
   const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const pupilMat    = new THREE.MeshBasicMaterial({ color: 0x1a2a3a });
   const darkMat     = new THREE.MeshBasicMaterial({ color: 0x2a1505 });
   const beardMat    = new THREE.MeshLambertMaterial({ color: 0x3a2010 });
 
-  // Eyes — tiny round whites with darker pupils
   [-0.09, 0.09].forEach(ex => {
     const ew = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), eyeWhiteMat);
     ew.scale.set(1.3, 1, 0.7);
@@ -1722,7 +1583,6 @@ function buildPlayer() {
     playerGroup.add(pu);
   });
 
-  // Eyebrows — angled determined look (rounded cylinders)
   [[-0.09, -0.18], [0.09, 0.18]].forEach(([bx, rotZ]) => {
     const brow = new THREE.Mesh(
       new THREE.CylinderGeometry(0.018, 0.018, 0.10, 6),
@@ -1733,13 +1593,11 @@ function buildPlayer() {
     playerGroup.add(brow);
   });
 
-  // Nose — small sphere
   const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), skinMat);
   nose.scale.set(0.9, 1.4, 1.2);
   nose.position.set(0, 1.93, 0.235);
   playerGroup.add(nose);
 
-  // Mouth — small smile (torus arc)
   const mouth = new THREE.Mesh(
     new THREE.TorusGeometry(0.06, 0.012, 6, 10, Math.PI),
     darkMat
@@ -1748,13 +1606,11 @@ function buildPlayer() {
   mouth.position.set(0, 1.81, 0.21);
   playerGroup.add(mouth);
 
-  // Goatee — small rounded patch (sphere)
   const goatee = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), beardMat);
   goatee.scale.set(1.2, 0.6, 0.5);
   goatee.position.set(0, 1.74, 0.20);
   playerGroup.add(goatee);
 
-  // Ears — small spheres on the sides
   [-0.245, 0.245].forEach(ex => {
     const ear = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), skinMat);
     ear.scale.set(0.5, 1.2, 1.2);
@@ -1762,11 +1618,9 @@ function buildPlayer() {
     playerGroup.add(ear);
   });
 
-  // ── ARMS ── (rounded cylinders, sphere hand). Pivot at shoulder for animation.
   function makeArm(side) {
     const arm = new THREE.Group();
 
-    // Upper sleeve
     const sleeve = new THREE.Mesh(
       new THREE.CylinderGeometry(0.10, 0.11, 0.42, 12),
       shirtMat
@@ -1775,7 +1629,6 @@ function buildPlayer() {
     sleeve.castShadow = true;
     arm.add(sleeve);
 
-    // Sleeve cuff (darker band, slightly wider)
     const cuff = new THREE.Mesh(
       new THREE.CylinderGeometry(0.115, 0.115, 0.05, 12),
       shirtMat2
@@ -1783,7 +1636,6 @@ function buildPlayer() {
     cuff.position.y = -0.42;
     arm.add(cuff);
 
-    // Forearm (skin)
     const forearm = new THREE.Mesh(
       new THREE.CylinderGeometry(0.09, 0.10, 0.32, 12),
       skinMat
@@ -1792,14 +1644,12 @@ function buildPlayer() {
     forearm.castShadow = true;
     arm.add(forearm);
 
-    // Hand (sphere)
     const hand = new THREE.Mesh(new THREE.SphereGeometry(0.10, 12, 10), skinMat);
     hand.scale.set(1.0, 1.1, 1.0);
     hand.position.y = -0.80;
     hand.castShadow = true;
     arm.add(hand);
 
-    // Thumb hint
     const thumb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), skinMat);
     thumb.scale.set(0.8, 1.5, 1);
     thumb.position.set(side * 0.08, -0.77, 0.05);
@@ -1816,10 +1666,8 @@ function buildPlayer() {
   armR.position.set(0.5, 1.45, 0);
   playerGroup.add(armR);
 
-  // ── LEGS ── (rounded cylinders) — pivot at hip
   function makeLeg() {
     const leg = new THREE.Group();
-    // Thigh
     const thigh = new THREE.Mesh(
       new THREE.CylinderGeometry(0.13, 0.12, 0.45, 12),
       pantsMat
@@ -1827,12 +1675,10 @@ function buildPlayer() {
     thigh.position.y = -0.225;
     thigh.castShadow = true;
     leg.add(thigh);
-    // Knee
     const knee = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), pantsMat2);
     knee.scale.set(1.0, 0.65, 1.0);
     knee.position.y = -0.46;
     leg.add(knee);
-    // Shin
     const shin = new THREE.Mesh(
       new THREE.CylinderGeometry(0.11, 0.12, 0.40, 12),
       pantsMat
@@ -1840,7 +1686,6 @@ function buildPlayer() {
     shin.position.y = -0.69;
     shin.castShadow = true;
     leg.add(shin);
-    // Cuff
     const cuff = new THREE.Mesh(
       new THREE.CylinderGeometry(0.13, 0.13, 0.04, 12),
       pantsMat2
@@ -1848,13 +1693,11 @@ function buildPlayer() {
     cuff.position.y = -0.91;
     leg.add(cuff);
 
-    // Sneaker upper (rounded box-ish — sphere stretched)
     const shoeUpper = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), shoeMat);
     shoeUpper.scale.set(0.95, 0.45, 1.5);
     shoeUpper.position.set(0, -0.99, 0.07);
     shoeUpper.castShadow = true;
     leg.add(shoeUpper);
-    // Sole (flatter sphere)
     const sole = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 8), soleMat);
     sole.scale.set(0.95, 0.18, 1.55);
     sole.position.set(0, -1.07, 0.07);
@@ -1872,10 +1715,13 @@ function buildPlayer() {
 
   playerGroup.position.copy(pState.pos);
   scene.add(playerGroup);
+
+  // MODIFICADO: Augusto inicia con el arma
+  equipWeapon('pistol');
 }
 
 /* ═══════════════════════════════════════════════════
-   WEAPON MODELS (visible in hands)
+   WEAPON MODELS
 ═══════════════════════════════════════════════════ */
 function createWeaponModel(type) {
   const g = new THREE.Group();
@@ -1884,77 +1730,61 @@ function createWeaponModel(type) {
   const woodMat  = new THREE.MeshLambertMaterial({ color:0x5D4037 });
 
   if (type === 'pistol') {
-    // Slide
     const slide = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.08), metalMat);
     slide.position.set(0, 0, 0.1);
     g.add(slide);
-    // Grip
     const grip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.26, 0.08), darkMat);
     grip.position.set(-0.06, -0.18, 0);
     grip.rotation.x = 0.2;
     g.add(grip);
-    // Barrel (forward)
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.12, 8), darkMat);
     barrel.rotation.x = Math.PI/2;
     barrel.position.set(0, 0, 0.38);
     g.add(barrel);
-    // Muzzle point
     const muzzle = new THREE.Object3D();
     muzzle.position.set(0, 0, 0.48);
     g.add(muzzle);
     g.userData.muzzle = muzzle;
   }
   else if (type === 'rifle') {
-    // Main body
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.7), metalMat);
     body.position.set(0, 0, 0.15);
     g.add(body);
-    // Barrel
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 8), darkMat);
     barrel.rotation.x = Math.PI/2;
     barrel.position.set(0, 0.03, 0.65);
     g.add(barrel);
-    // Stock
     const stock = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.18, 0.35), woodMat);
     stock.position.set(0, -0.02, -0.3);
     g.add(stock);
-    // Grip
     const grip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.22, 0.1), darkMat);
     grip.position.set(0, -0.18, 0);
     g.add(grip);
-    // Magazine
     const mag = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.12), darkMat);
     mag.position.set(0, -0.19, 0.2);
     g.add(mag);
-    // Scope/sight
     const sight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.2), darkMat);
     sight.position.set(0, 0.12, 0.15);
     g.add(sight);
-    // Muzzle
     const muzzle = new THREE.Object3D();
     muzzle.position.set(0, 0.03, 0.92);
     g.add(muzzle);
     g.userData.muzzle = muzzle;
   }
   else if (type === 'shotgun') {
-    // Body
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.6), metalMat);
     body.position.set(0, 0, 0.1);
     g.add(body);
-    // Barrel (wider)
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.55, 10), darkMat);
     barrel.rotation.x = Math.PI/2;
     barrel.position.set(0, 0.04, 0.55);
     g.add(barrel);
-    // Pump (forward grip)
     const pump = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.18), woodMat);
     pump.position.set(0, -0.05, 0.35);
     g.add(pump);
-    // Stock
     const stock = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.2, 0.35), woodMat);
     stock.position.set(0, -0.02, -0.25);
     g.add(stock);
-    // Muzzle
     const muzzle = new THREE.Object3D();
     muzzle.position.set(0, 0.04, 0.85);
     g.add(muzzle);
@@ -1971,9 +1801,7 @@ function equipWeapon(type) {
   }
   if (!type) return;
   playerWeaponMesh = createWeaponModel(type);
-  // Position in right hand, held in front of body
   playerWeaponMesh.position.set(0.32, 1.1, 0.3);
-  // Point forward (+Z local)
   playerGroup.add(playerWeaponMesh);
 }
 
@@ -2006,13 +1834,11 @@ function makeEnemy(x, z) {
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.28,12,12), headMat);
   head.position.y = 1.78; head.castShadow = true; g.add(head);
 
-  // ─── ENEMY FACE (facing -Z local, toward player after lookAt) ───
   const enEyeWhite = new THREE.MeshBasicMaterial({ color:0xf5f5dc });
   const enPupil    = new THREE.MeshBasicMaterial({ color:0xcc0000 });
   const enDark     = new THREE.MeshBasicMaterial({ color:0x0a0a0a });
   const enScar     = new THREE.MeshBasicMaterial({ color:0x8B0000 });
 
-  // Red glowing eyes
   [-0.095, 0.095].forEach(ex => {
     const ew = new THREE.Mesh(new THREE.SphereGeometry(0.065,8,8), enEyeWhite);
     ew.position.set(ex, 1.82, -0.22);
@@ -2023,7 +1849,6 @@ function makeEnemy(x, z) {
     g.add(pu);
   });
 
-  // Angry eyebrows (angled inward like >  <)
   [[-0.1, 0.35], [0.1, -0.35]].forEach(([bx, rotZ]) => {
     const brow = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.032, 0.04), enDark);
     brow.position.set(bx, 1.94, -0.24);
@@ -2031,12 +1856,10 @@ function makeEnemy(x, z) {
     g.add(brow);
   });
 
-  // Scowl / gritted teeth
   const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.04, 0.03), enDark);
   mouth.position.set(0, 1.65, -0.24);
   g.add(mouth);
 
-  // Vertical teeth lines (gritted look)
   [-0.05, 0, 0.05].forEach(tx => {
     const tooth = new THREE.Mesh(
       new THREE.BoxGeometry(0.015, 0.035, 0.02),
@@ -2046,19 +1869,16 @@ function makeEnemy(x, z) {
     g.add(tooth);
   });
 
-  // Diagonal scar on one cheek
   const scar = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.13, 0.015), enScar);
   scar.position.set(0.12, 1.77, -0.24);
   scar.rotation.z = 0.4;
   g.add(scar);
 
-  // Nose
   const enNose = new THREE.Mesh(new THREE.SphereGeometry(0.045,6,6), headMat);
   enNose.position.set(0, 1.74, -0.265);
   enNose.scale.set(0.8, 1, 1.2);
   g.add(enNose);
 
-  // Ears
   [-0.26, 0.26].forEach(ex => {
     const ear = new THREE.Mesh(new THREE.SphereGeometry(0.055,6,6), headMat);
     ear.position.set(ex, 1.78, 0);
@@ -2071,7 +1891,6 @@ function makeEnemy(x, z) {
     leg.position.set(lx, 0.35, 0); g.add(leg);
   });
 
-  // 3D health bar
   const hbBg = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 0.13),
     new THREE.MeshBasicMaterial({ color:0x222222, side:THREE.DoubleSide })
@@ -2115,39 +1934,32 @@ function makePolice(x, z) {
   const hatMat     = new THREE.MeshLambertMaterial({ color:0x0D1642 });
   const badgeMat   = new THREE.MeshBasicMaterial({ color:0xFFD700 });
 
-  // Torso
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.4), uniformMat);
   torso.position.y = 1.1; torso.castShadow = true;
   g.add(torso);
 
-  // Gold badge on chest
   const badge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.03), badgeMat);
   badge.position.set(-0.18, 1.2, -0.21);
   g.add(badge);
 
-  // Belt
   const belt = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.1, 0.42), new THREE.MeshLambertMaterial({ color:0x2a1a0a }));
   belt.position.y = 0.75;
   g.add(belt);
 
-  // Head
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), skinMat);
   head.position.y = 1.78; head.castShadow = true;
   g.add(head);
 
-  // Police cap (cylinder + visor)
   const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.18, 10), hatMat);
   cap.position.y = 2.02;
   g.add(cap);
   const visor = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.18), new THREE.MeshLambertMaterial({ color:0x050505 }));
   visor.position.set(0, 1.94, -0.18);
   g.add(visor);
-  // Cap badge
   const capBadge = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.01), badgeMat);
   capBadge.position.set(0, 2.02, -0.3);
   g.add(capBadge);
 
-  // ─── Serious face (facing -Z) ───
   const eyeWhite = new THREE.MeshBasicMaterial({ color:0xffffff });
   const pupilMat = new THREE.MeshBasicMaterial({ color:0x1a1a1a });
   const darkMat  = new THREE.MeshBasicMaterial({ color:0x2a1505 });
@@ -2161,50 +1973,42 @@ function makePolice(x, z) {
     g.add(pu);
   });
 
-  // Stern straight eyebrows
   [-0.1, 0.1].forEach(bx => {
     const brow = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.028, 0.04), darkMat);
     brow.position.set(bx, 1.95, -0.24);
     g.add(brow);
   });
 
-  // Mouth (firm line)
   const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.02, 0.03), darkMat);
   mouth.position.set(0, 1.68, -0.24);
   g.add(mouth);
 
-  // Mustache for that cop look
   const mustache = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.03), new THREE.MeshLambertMaterial({ color:0x3a2010 }));
   mustache.position.set(0, 1.72, -0.25);
   g.add(mustache);
 
-  // Arms
   [-0.48, 0.48].forEach(ax => {
     const arm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.6, 0.22), uniformMat);
     arm.position.set(ax, 1.0, 0);
     g.add(arm);
   });
 
-  // Legs
   [-0.2, 0.2].forEach(lx => {
     const leg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.75, 0.28), pantsMat);
     leg.position.set(lx, 0.38, 0); leg.castShadow = true;
     g.add(leg);
   });
 
-  // Shoes
   [-0.2, 0.2].forEach(lx => {
     const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.38), shoeMat);
     shoe.position.set(lx, 0.06, 0.05);
     g.add(shoe);
   });
 
-  // Pistol in hand (simple black box)
   const gun = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.35), new THREE.MeshLambertMaterial({ color:0x111111 }));
   gun.position.set(0.48, 0.92, -0.25);
   g.add(gun);
 
-  // 3D health bar
   const hbBg = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 0.13),
     new THREE.MeshBasicMaterial({ color:0x222222, side:THREE.DoubleSide })
@@ -2219,7 +2023,6 @@ function makePolice(x, z) {
   hbFg.position.set(0, 2.45, 0.01);
   g.add(hbFg);
 
-  // Flashing light halo (siren effect attached to head)
   const siren = new THREE.PointLight(0x3399FF, 0, 8);
   siren.position.set(0, 2.3, 0);
   g.add(siren);
@@ -2263,7 +2066,6 @@ function killPolice(po) {
   document.getElementById('score-val').textContent = pState.score;
   updateWanted();
 
-  // Remove after delay
   setTimeout(() => {
     scene.remove(po.group);
     const idx = police.indexOf(po);
@@ -2274,7 +2076,6 @@ function killPolice(po) {
 function trySpawnPolice(dt) {
   policeSpawnT -= dt;
   if (pState.wanted < 2) {
-    // Despawn existing police slowly when no longer wanted
     if (pState.wanted === 0 && police.length > 0 && policeSpawnT <= 0) {
       const po = police.find(p => p.alive);
       if (po) {
@@ -2294,12 +2095,10 @@ function trySpawnPolice(dt) {
   if (policeSpawnT > 0) return;
   policeSpawnT = 3.5 - pState.wanted * 0.4;
 
-  // Spawn at edge of view / off-screen angle
   const angle = Math.random() * Math.PI * 2;
   const dist  = 30 + Math.random() * 15;
   const sx = pState.pos.x + Math.sin(angle) * dist;
   const sz = pState.pos.z + Math.cos(angle) * dist;
-  // Clamp inside world
   const bound = WORLD - 5;
   const cx = Math.max(-bound, Math.min(bound, sx));
   const cz = Math.max(-bound, Math.min(bound, sz));
@@ -2312,7 +2111,6 @@ function updatePolice(dt) {
     po.hbFg.parent && po.hbFg.parent.lookAt(camera.position);
     if (!po.alive) return;
 
-    // Flashing siren
     po.sirenPulse += dt * 6;
     po.siren.intensity = 2.5 + Math.sin(po.sirenPulse) * 2;
     po.siren.color.setHex(Math.sin(po.sirenPulse) > 0 ? 0x3399FF : 0xFF3333);
@@ -2320,7 +2118,6 @@ function updatePolice(dt) {
     const gpos = po.group.position;
     const dist = gpos.distanceTo(pState.pos);
 
-    // Always chase player
     if (dist > 3.5) {
       const dir = new THREE.Vector3().subVectors(pState.pos, gpos).normalize();
       const np  = gpos.clone().add(dir.clone().multiplyScalar(po.speed * dt));
@@ -2337,7 +2134,6 @@ function updatePolice(dt) {
       po.group.lookAt(new THREE.Vector3(pState.pos.x, gpos.y, pState.pos.z));
     }
 
-    // Shoot
     if (dist < po.shootDist) {
       po.shootT += dt;
       if (po.shootT >= po.shootInterval) {
@@ -2350,7 +2146,7 @@ function updatePolice(dt) {
 
 function policeFire(po, dist) {
   if (!pState.alive) return;
-  const acc = Math.max(0.25, 0.85 - dist/35); // more accurate than regular enemies
+  const acc = Math.max(0.25, 0.85 - dist/35); 
   if (Math.random() < acc) {
     const dmg = 12 + Math.floor(Math.random() * 8);
     pState.health -= dmg;
@@ -2381,12 +2177,26 @@ const PICKUP_DEFS = [
 const PICKUP_COLORS = { pistol:0xFFD700, rifle:0xFF6600, shotgun:0xFF00FF, health:0x00FF44 };
 const PICKUP_AMMO   = { pistol:30, rifle:25, shotgun:12 };
 
+// MODIFICADO: Modelos reales para power-ups
+function makeHealthModel() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: 0x00FF44 });
+  const v = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), mat);
+  const h = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.2, 0.2), mat);
+  g.add(v); g.add(h);
+  return g;
+}
+
 function spawnPickups() {
   PICKUP_DEFS.forEach(d => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.55,0.55,0.55),
-      new THREE.MeshBasicMaterial({ color: PICKUP_COLORS[d.type] })
-    );
+    let mesh;
+    if (d.type === 'health') {
+      mesh = makeHealthModel();
+    } else {
+      mesh = createWeaponModel(d.type);
+      mesh.scale.setScalar(2.5); 
+    }
+    
     mesh.position.set(d.x, 0.5, d.z);
     scene.add(mesh);
 
@@ -2421,17 +2231,14 @@ function doShoot() {
   pState.ammo--;
   pState.shootCooldown = wd.cooldown;
 
-  // Direction = where the camera is looking (the crosshair direction)
   const dir = new THREE.Vector3();
   camera.getWorldDirection(dir);
   dir.normalize();
 
-  // Origin = the weapon's muzzle world position (falls back to chest)
   let origin;
   if (playerWeaponMesh && playerWeaponMesh.userData.muzzle) {
     origin = new THREE.Vector3();
     playerWeaponMesh.userData.muzzle.getWorldPosition(origin);
-    // Push slightly in firing direction so the bullet doesn't intersect the weapon itself
     origin.add(dir.clone().multiplyScalar(0.15));
   } else {
     origin = pState.pos.clone()
@@ -2439,14 +2246,12 @@ function doShoot() {
       .add(dir.clone().multiplyScalar(0.55));
   }
 
-  // Small recoil kick
-  playerGroup.position.y = 0; // reset if any
+  playerGroup.position.y = 0; 
   if (playerWeaponMesh) {
     playerWeaponMesh.position.z -= 0.08;
     setTimeout(() => { if (playerWeaponMesh) playerWeaponMesh.position.z += 0.08; }, 60);
   }
 
-  // Shotgun: multiple pellets
   const pellets = pState.weapon === 'shotgun' ? 5 : 1;
   for (let p=0; p<pellets; p++) {
     const spreadDir = dir.clone().add(
@@ -2455,21 +2260,21 @@ function doShoot() {
 
     const ray = new THREE.Raycaster(origin, spreadDir, 0, 180);
 
-    // Hit enemies
+    // MODIFICADO: Hitboxes expandidas
     enemies.forEach(en => {
       if (!en.alive) return;
       const box = new THREE.Box3().setFromObject(en.group);
+      box.expandByScalar(0.5); 
       if (ray.ray.intersectsBox(box)) hitEnemy(en, wd.dmg);
     });
 
-    // Hit police
     police.forEach(po => {
       if (!po.alive) return;
       const box = new THREE.Box3().setFromObject(po.group);
+      box.expandByScalar(0.5); 
       if (ray.ray.intersectsBox(box)) hitPolice(po, wd.dmg);
     });
 
-    // Bullet trail
     const trail = new THREE.Mesh(
       new THREE.CylinderGeometry(0.025, 0.025, 0.8, 4),
       new THREE.MeshBasicMaterial({ color:wd.color, transparent:true, opacity:0.85 })
@@ -2480,7 +2285,6 @@ function doShoot() {
     bullets.push({ mesh:trail, vel:spreadDir.clone().multiplyScalar(180), pos:origin.clone().add(spreadDir.clone().multiplyScalar(2)), life:0.7 });
   }
 
-  // Muzzle flash
   const fl = new THREE.PointLight(wd.color, 4, 6);
   fl.position.copy(origin);
   scene.add(fl);
@@ -2516,10 +2320,8 @@ function killEnemy(en) {
   updateWanted();
   onEnemyKilled(en);
 
-  // Boss doesn't respawn
   if (en.isBoss) return;
 
-  // Respawn
   setTimeout(() => {
     if (!en.group.parent) return;
     en.alive = true;
@@ -2566,7 +2368,6 @@ function resolvePos(newX, newZ) {
       rx += (dx/dist)*push;
       rz += (dz/dist)*push;
     } else if (dist === 0) {
-      // inside: push out nearest wall
       const toL = rx - b.minX, toR = b.maxX - rx;
       const toT = rz - b.minZ, toB = b.maxZ - rz;
       const min4 = Math.min(toL, toR, toT, toB);
@@ -2589,16 +2390,13 @@ function resolvePos(newX, newZ) {
 function updatePlayer(dt) {
   if (!pState.alive) return;
 
-  // Shoot cooldown ticks even while driving
   if (pState.shootCooldown > 0) pState.shootCooldown -= dt;
 
-  // If driving, delegate to vehicle controller and skip walking
   if (driving) {
     updateDriving(dt);
     return;
   }
 
-  // Forward/right vectors from camera angle
   const fwd = new THREE.Vector3(-Math.sin(CAM.theta), 0, -Math.cos(CAM.theta));
   const rgt = new THREE.Vector3( Math.cos(CAM.theta), 0, -Math.sin(CAM.theta));
 
@@ -2608,7 +2406,6 @@ function updatePlayer(dt) {
   if (KEYS['KeyA']||KEYS['ArrowLeft'])  { mx-=rgt.x; mz-=rgt.z; }
   if (KEYS['KeyD']||KEYS['ArrowRight']) { mx+=rgt.x; mz+=rgt.z; }
 
-  // Joystick override
   if (JOY.active) {
     mx = fwd.x*JOY.y + rgt.x*JOY.x;
     mz = fwd.z*JOY.y + rgt.z*JOY.x;
@@ -2628,19 +2425,15 @@ function updatePlayer(dt) {
     pState.pos.x = rp.x;
     pState.pos.z = rp.z;
 
-    // Face direction: if armed, track camera (so weapon + crosshair align);
-    // otherwise, face movement direction.
     const targetRot = pState.weapon
       ? (CAM.theta + Math.PI)
       : Math.atan2(mx, mz);
     pState.rot = lerpAngle(pState.rot, targetRot, 0.22);
 
-    // Leg animation
     const t = clock.getElapsedTime();
     const spd = sprinting ? 12 : 7;
     legL.rotation.x =  Math.sin(t*spd) * 0.55;
     legR.rotation.x = -Math.sin(t*spd) * 0.55;
-    // Arms: if armed, hold weapon up; else swing naturally
     if (pState.weapon) {
       armR.rotation.x = -1.1;
       armL.rotation.x = -0.7;
@@ -2649,7 +2442,6 @@ function updatePlayer(dt) {
       armR.rotation.x =  Math.sin(t*spd) * 0.4;
     }
   } else {
-    // Idle — still aim at camera if armed
     if (pState.weapon) {
       pState.rot = lerpAngle(pState.rot, CAM.theta + Math.PI, 0.22);
       armR.rotation.x = lerp(armR.rotation.x, -1.1, 0.15);
@@ -2665,12 +2457,8 @@ function updatePlayer(dt) {
   playerGroup.position.copy(pState.pos);
   playerGroup.rotation.y = pState.rot;
 
-  // Shoot cooldown  [already ticked at top of updatePlayer]
-
-  // Keyboard fire
   if (KEYS['KeyF'] || KEYS['Space']) doShoot();
 
-  // E key: prefer entering nearby vehicle, else pickup
   if (KEYS['KeyE']) {
     KEYS['KeyE'] = false;
     const nearV = findNearbyVehicle();
@@ -2678,14 +2466,12 @@ function updatePlayer(dt) {
     else tryPickup();
   }
 
-  // Auto-pickup on proximity
   pickups.forEach(p => {
     if (!p.active) return;
     const dx = p.x - pState.pos.x, dz = p.z - pState.pos.z;
     if (dx*dx + dz*dz < 2.25) grabPickup(p);
   });
 
-  // Wanted decay
   if (pState.wantedT > 0) {
     pState.wantedT -= dt;
     if (pState.wantedT <= 0 && pState.wanted > 0) {
@@ -2695,7 +2481,6 @@ function updatePlayer(dt) {
     }
   }
 
-  // Reload
   if (KEYS['KeyR'] && pState.weapon) {
     KEYS['KeyR'] = false;
     const ammoGiven = PICKUP_AMMO[pState.weapon] || 20;
@@ -2745,7 +2530,6 @@ function updateEnemies(dt) {
   const t = clock.getElapsedTime();
 
   enemies.forEach(en => {
-    // Health bar faces camera
     en.hbFg.parent && en.hbFg.parent.lookAt(camera.position);
 
     if (!en.alive) return;
@@ -2753,7 +2537,6 @@ function updateEnemies(dt) {
     const gpos = en.group.position;
     const dist = gpos.distanceTo(pState.pos);
 
-    // State transitions
     if (dist < en.alertDist)  en.state = 'chase';
     else if (dist > en.alertDist*1.6) en.state = 'patrol';
 
@@ -2763,7 +2546,6 @@ function updateEnemies(dt) {
         const np  = gpos.clone().add(dir.clone().multiplyScalar(en.speed*dt));
         np.y = 0;
 
-        // Simple building check for enemy
         let blocked = false;
         for (const b of buildings) {
           const cx = Math.max(b.minX, Math.min(np.x, b.maxX));
@@ -2775,7 +2557,6 @@ function updateEnemies(dt) {
         en.group.lookAt(new THREE.Vector3(pState.pos.x, gpos.y, pState.pos.z));
       }
 
-      // Shoot
       if (dist < en.shootDist) {
         en.shootT += dt;
         if (en.shootT >= en.shootInterval) {
@@ -2784,7 +2565,6 @@ function updateEnemies(dt) {
         }
       }
     } else {
-      // Patrol
       const pd = gpos.distanceTo(en.patrolPt);
       if (pd < 1.5) {
         en.patrolPt.set(rng(-80,80), 0, rng(-80,80));
@@ -2800,7 +2580,6 @@ function updateEnemies(dt) {
 
 function enemyFire(en, dist) {
   if (!pState.alive) return;
-  // Accuracy decreases with distance
   const acc = Math.max(0.08, 0.6 - dist/40);
   if (Math.random() < acc) {
     const dmg = 8 + Math.floor(Math.random()*6);
@@ -2817,7 +2596,6 @@ function enemyFire(en, dist) {
 ═══════════════════════════════════════════════════ */
 function updateCamera() {
   if (driving) {
-    // Chase camera — sit behind and above the car, looking forward along its heading
     const v = driving;
     const fx = Math.cos(v.heading);
     const fz = -Math.sin(v.heading);
@@ -2839,12 +2617,8 @@ function updateCamera() {
   const tz = pState.pos.z + CAM.dist*Math.cos(CAM.theta)*Math.cos(CAM.phi);
 
   camera.position.lerp(new THREE.Vector3(tx,ty,tz), 0.12);
-  // Look at point that's elevated above the player. With the crosshair at 38%
-  // (above center), making the camera tilt very slightly downward keeps the
-  // crosshair visually aligned with the actual aim direction.
   camera.lookAt(pState.pos.x, pState.pos.y + 1.6, pState.pos.z);
 
-  // Sun shadow follows the player so we get crisp shadows everywhere
   if (window.__sunLight) {
     const px = pState.pos.x, pz = pState.pos.z;
     window.__sunLight.position.set(px + 60, 100, pz + 40);
@@ -2857,7 +2631,6 @@ function updateCamera() {
    UPDATE PICKUPS & PARTICLES & BULLETS
 ═══════════════════════════════════════════════════ */
 function updateWorld(dt, t) {
-  // Pickups float & spin
   pickups.forEach(p => {
     if (!p.active) return;
     p.mesh.rotation.y += 0.025;
@@ -2865,7 +2638,6 @@ function updateWorld(dt, t) {
     p.ring.rotation.z = t*0.8;
   });
 
-  // Bullets
   for (let i=bullets.length-1; i>=0; i--) {
     const b = bullets[i];
     b.life -= dt;
@@ -2875,7 +2647,6 @@ function updateWorld(dt, t) {
     if (b.life<=0) { scene.remove(b.mesh); bullets.splice(i,1); }
   }
 
-  // Blood particles
   for (let i=particles.length-1; i>=0; i--) {
     const p = particles[i];
     p.life -= dt;
@@ -2886,7 +2657,6 @@ function updateWorld(dt, t) {
     if (p.life<=0) { scene.remove(p.mesh); particles.splice(i,1); }
   }
 
-  // Feed timers
   for (let i=feedMsgs.length-1; i>=0; i--) {
     feedMsgs[i].t -= dt;
     if (feedMsgs[i].t<=0) feedMsgs.splice(i,1);
@@ -2907,17 +2677,14 @@ function drawMinimap() {
 
   mmCtx.clearRect(0,0,MM,MM);
 
-  // Ground
   mmCtx.fillStyle = '#2a2a2a';
   mmCtx.fillRect(0,0,MM,MM);
 
-  // Roads
   mmCtx.fillStyle = '#1a1a1a';
   [[ox-MM/2*s, oz-8*s, MM, 16*s],[ox-8*s, oz-MM/2*s, 16*s, MM]].forEach(r =>
     mmCtx.fillRect(r[0],r[1],r[2],r[3])
   );
 
-  // Buildings
   mmCtx.fillStyle = '#555';
   buildings.forEach(b => {
     const bx=(b.minX+WORLD)*s, bz=(b.minZ+WORLD)*s;
@@ -2925,7 +2692,6 @@ function drawMinimap() {
     mmCtx.fillRect(bx, bz, bw, bd);
   });
 
-  // Property markers — gold for sale, green if owned, mansion is a star
   if (typeof PROPERTIES_DATA !== 'undefined') {
     PROPERTIES_DATA.forEach(p => {
       const mx = (p.pos.x + WORLD) * s;
@@ -2936,7 +2702,6 @@ function drawMinimap() {
       mmCtx.shadowBlur = isMansion ? 8 : 4;
       mmCtx.fillStyle = owned ? '#44ff66' : '#ffaa00';
       if (isMansion) {
-        // small star (4 spokes)
         const sz = 3;
         mmCtx.beginPath();
         mmCtx.moveTo(mx, mz - sz);
@@ -2956,14 +2721,12 @@ function drawMinimap() {
     });
   }
 
-  // Pickups
   pickups.forEach(p => {
     if (!p.active) return;
     mmCtx.fillStyle = p.type==='health'?'#00FF44':'#FFD700';
     mmCtx.fillRect((p.x+WORLD)*s-1, (p.z+WORLD)*s-1, 3, 3);
   });
 
-  // Enemies
   mmCtx.fillStyle = '#FF4444';
   enemies.forEach(en => {
     if (!en.alive) return;
@@ -2974,7 +2737,6 @@ function drawMinimap() {
     mmCtx.fill();
   });
 
-  // Police (flashing blue/red dots)
   const flashBlue = Math.floor(performance.now() / 300) % 2 === 0;
   police.forEach(po => {
     if (!po.alive) return;
@@ -2986,7 +2748,6 @@ function drawMinimap() {
     mmCtx.fill();
   });
 
-  // Mission marker — big pulsing gold star
   if (mState.markerMesh && mState.active) {
     const mx = (mState.markerMesh.position.x + WORLD) * s;
     const mz = (mState.markerMesh.position.z + WORLD) * s;
@@ -3000,14 +2761,12 @@ function drawMinimap() {
     mmCtx.shadowBlur = 0;
   }
 
-  // Player
   const px=(pState.pos.x+WORLD)*s, pz=(pState.pos.z+WORLD)*s;
   mmCtx.fillStyle = '#00AAFF';
   mmCtx.beginPath();
   mmCtx.arc(px, pz, 4, 0, Math.PI*2);
   mmCtx.fill();
 
-  // Update minimap arrow rotation
   document.getElementById('minimap-arrow').style.transform =
     `translate(-50%, -100%) rotate(${pState.rot}rad)`;
 }
@@ -3075,14 +2834,12 @@ function triggerDeath() {
    INPUT SETUP
 ═══════════════════════════════════════════════════ */
 function setupInput() {
-  // Keyboard
   document.addEventListener('keydown', e => {
     KEYS[e.code] = true;
     if (e.code==='KeyF') doShoot();
   });
   document.addEventListener('keyup', e => { KEYS[e.code] = false; });
 
-  // Mouse: pointer lock for desktop
   document.getElementById('c').addEventListener('click', () => {
     if (!isMobile() && gameRunning) {
       document.getElementById('c').requestPointerLock();
@@ -3100,7 +2857,6 @@ function setupInput() {
     if (e.button===0 && pointerLocked) doShoot();
   });
 
-  // Mobile
   setupMobile();
 }
 
@@ -3154,7 +2910,6 @@ function setupMobile() {
     }
   }, { passive:false });
 
-  // Camera drag: right half of canvas
   document.getElementById('c').addEventListener('touchstart', e => {
     for (const t of e.changedTouches) {
       if (t.clientX > window.innerWidth*0.42 && !camTouch) {
@@ -3163,7 +2918,6 @@ function setupMobile() {
     }
   }, { passive:true });
 
-  // Fire button
   const btnShoot = document.getElementById('btn-shoot');
   btnShoot.addEventListener('touchstart', e => {
     e.preventDefault();
@@ -3172,7 +2926,6 @@ function setupMobile() {
   }, { passive:false });
   btnShoot.addEventListener('touchend', () => { clearInterval(mobileFireTimer); });
 
-  // Sprint button
   document.getElementById('btn-sprint').addEventListener('touchstart', e => {
     e.preventDefault(); mobileSprint = true;
   }, { passive:false });
@@ -3231,9 +2984,7 @@ function updateActionBtn() {
     return;
   }
 
-  // Property prompt
   if (pState.inMansion) {
-    // Show exit button only when near the door
     if (mansionInterior) {
       const dx = pState.pos.x - 0;
       const dz = pState.pos.z - (5000 + mansionInterior.exitPos.z);
@@ -3248,16 +2999,16 @@ function updateActionBtn() {
     actionBtn.style.display = 'none';
     return;
   }
+
+  // MODIFICADO: Permite mostrar el botón de entrar para CUALQUIER propiedad
   if (nearbyProperty) {
     const p = nearbyProperty.data;
     const owned = ownedProperties.has(p.id);
     actionBtn.style.display = 'flex';
-    if (owned && p.type === 'mansion') {
+    if (owned) {
       actionBtn.classList.remove('exit');
-      actionIcon.textContent = '🏛️';
+      actionIcon.textContent = p.type === 'mansion' ? '🏛️' : '🚪';
       actionLabel.textContent = 'ENTRAR';
-    } else if (owned) {
-      actionBtn.style.display = 'none'; // already own non-mansion, no action needed
     } else if (pState.money >= p.price) {
       actionBtn.classList.remove('exit');
       actionIcon.textContent = '🏡';
@@ -3288,7 +3039,6 @@ function doActionBtn() {
   }
 }
 
-// Wire up: support both touch and click so it works on mobile & desktop
 actionBtn.addEventListener('click', e => {
   e.preventDefault();
   e.stopPropagation();
@@ -3360,7 +3110,6 @@ function makeMissionMarker(x, z) {
   const g = new THREE.Group();
   const color = 0xFFD700;
 
-  // Tall light pillar (visible from far)
   const pillar = new THREE.Mesh(
     new THREE.CylinderGeometry(0.6, 0.6, 50, 10, 1, true),
     new THREE.MeshBasicMaterial({ color, transparent:true, opacity:0.35, side:THREE.DoubleSide })
@@ -3368,7 +3117,6 @@ function makeMissionMarker(x, z) {
   pillar.position.y = 25;
   g.add(pillar);
 
-  // Inner brighter core
   const core = new THREE.Mesh(
     new THREE.CylinderGeometry(0.25, 0.25, 50, 8),
     new THREE.MeshBasicMaterial({ color:0xFFFFAA, transparent:true, opacity:0.7 })
@@ -3376,7 +3124,6 @@ function makeMissionMarker(x, z) {
   core.position.y = 25;
   g.add(core);
 
-  // Ground ring (rotating)
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(2, 2.6, 32),
     new THREE.MeshBasicMaterial({ color, side:THREE.DoubleSide, transparent:true, opacity:0.85 })
@@ -3386,7 +3133,6 @@ function makeMissionMarker(x, z) {
   g.add(ring);
   g.userData.ring = ring;
 
-  // Point light for glow
   const lt = new THREE.PointLight(color, 2, 15);
   lt.position.y = 3;
   g.add(lt);
@@ -3406,7 +3152,6 @@ function spawnBoss(x, z) {
   boss.shootDist = 26;
   boss.isBoss = true;
   boss.group.scale.setScalar(1.6);
-  // Recolor to make it intimidating
   boss.group.children.forEach(c => {
     if (c.material && c.material.color && c !== boss.hbFg) {
       if (c.material.color.getHex() === 0xB71C1C) c.material.color.setHex(0x000000);
@@ -3420,7 +3165,6 @@ function spawnBoss(x, z) {
 function startMission(i) {
   const m = MISSIONS[i];
   if (!m) {
-    // All missions complete
     mState.allDone = true;
     mState.active  = false;
     const panel = document.getElementById('mission-panel');
@@ -3437,13 +3181,11 @@ function startMission(i) {
   mState.timer    = m.time || 0;
   mState.active   = true;
 
-  // Clear old marker
   if (mState.markerMesh) {
     scene.remove(mState.markerMesh);
     mState.markerMesh = null;
   }
 
-  // Setup per mission type
   if (m.type === 'waypoint') {
     mState.markerMesh = makeMissionMarker(m.target.x, m.target.z);
   }
@@ -3465,7 +3207,6 @@ function completeMission() {
   if (!mState.active) return;
   mState.active = false;
 
-  // Rewards
   if (m.reward) {
     if (m.reward.score) {
       pState.score += m.reward.score;
@@ -3489,13 +3230,11 @@ function completeMission() {
   panel.classList.add('completed');
   document.getElementById('mission-header').textContent = '✅ COMPLETADA';
 
-  // Clear marker
   if (mState.markerMesh) {
     scene.remove(mState.markerMesh);
     mState.markerMesh = null;
   }
 
-  // Start next after short delay
   setTimeout(() => {
     panel.classList.remove('completed');
     document.getElementById('mission-header').textContent = '📋 MISIÓN';
@@ -3513,7 +3252,6 @@ function failMission() {
   panel.classList.add('failed');
   document.getElementById('mission-header').textContent = '❌ FALLADA';
 
-  // Clean up boss if any
   if (mState.bossRef && mState.bossRef.alive) {
     scene.remove(mState.bossRef.group);
     const idx = enemies.indexOf(mState.bossRef);
@@ -3525,7 +3263,6 @@ function failMission() {
     mState.markerMesh = null;
   }
 
-  // Retry same mission
   setTimeout(() => {
     panel.classList.remove('failed');
     document.getElementById('mission-header').textContent = '📋 MISIÓN';
@@ -3549,13 +3286,11 @@ function updateMissions(dt) {
   if (!mState.active) return;
   const m = MISSIONS[mState.index];
 
-  // Timer countdown
   if (m.time && m.type !== 'survive_wanted') {
     mState.timer -= dt;
     if (mState.timer <= 0) { failMission(); return; }
   }
 
-  // Waypoint
   if (m.type === 'waypoint') {
     const dx = m.target.x - pState.pos.x;
     const dz = m.target.z - pState.pos.z;
@@ -3565,21 +3300,18 @@ function updateMissions(dt) {
     }
   }
 
-  // Survive with wanted
   if (m.type === 'survive_wanted') {
     if (pState.wanted >= m.target) {
       mState.progress += dt;
       if (mState.progress >= m.time) completeMission();
     }
-    // Keep wanted level from decaying during mission
     if (pState.wanted < m.target) {
-      // Nothing — let player decide to attract cops
+      // Nothing
     } else {
-      pState.wantedT = Math.max(pState.wantedT, 2); // sustain slightly
+      pState.wantedT = Math.max(pState.wantedT, 2); 
     }
   }
 
-  // Rotate marker
   if (mState.markerMesh && mState.markerMesh.userData.ring) {
     mState.markerMesh.userData.ring.rotation.z += dt * 2;
     mState.markerMesh.rotation.y += dt * 0.5;
@@ -3620,7 +3352,6 @@ function updateMissionUI() {
     }
   }
 
-  // Timer warning
   const criticalTime = (m.type === 'waypoint' || m.type === 'kills_timed') && mState.timer < 10;
   panel.classList.toggle('timer-critical', criticalTime);
 
@@ -3638,7 +3369,7 @@ function startGame() {
   updateWanted();
   updateMoney();
   addFeed('👋 ¡Bienvenido, Augusto!');
-  addFeed('🔫 Busca armas brillantes en el suelo');
+  addFeed('🔫 Tienes una pistola. Busca más armas brillantes');
   addFeed(`🏡 Hay ${PROPERTIES_DATA.length} propiedades para comprar (B)`);
   startMission(0);
   loop();
@@ -3660,7 +3391,7 @@ function isMobile() {
 }
 
 /* ═══════════════════════════════════════════════════
-   PROPERTIES — comprar casas y entrar a la mansión
+   PROPERTIES — comprar casas y entrar
 ═══════════════════════════════════════════════════ */
 const PROPERTIES_DATA = [
   { id:'casa1', name:'Casa Suburbana',  price:1200,  pos:{x: 40, z:-70}, color:0xc89e6a, accent:0x6d4c3e, w:14, d:14, h:6, type:'house' },
@@ -3680,15 +3411,14 @@ const saveOwned = () => {
   try { localStorage.setItem('ag_owned_properties', JSON.stringify([...ownedProperties])); } catch(e) {}
 };
 
-const propertyMeshes = []; // { data, group, portalY }
+const propertyMeshes = []; 
 let nearbyProperty = null;
 let mansionInterior = null;
 let mansionReturnPos = null;
-const buildingsBackup = []; // for stashing collision when entering mansion
+const buildingsBackup = []; 
 
 function spawnProperties(occupied) {
   PROPERTIES_DATA.forEach(p => {
-    // Push position into occupied so other procedural buildings/trees won't overlap
     occupied.push({ x:p.pos.x, z:p.pos.z, w:p.w + 6, d:p.d + 6 });
     const g = makePropertyMesh(p);
     propertyMeshes.push({ data:p, group:g });
@@ -3699,17 +3429,14 @@ function makePropertyMesh(p) {
   const g = new THREE.Group();
   const isMansion = p.type === 'mansion';
 
-  // ── Front yard (lighter ground) ──
-  // Built as a thin BoxGeometry, not a Plane → no z-fighting with road system
   const yard = new THREE.Mesh(
     new THREE.BoxGeometry(p.w + 8, 0.04, p.d + 8),
     new THREE.MeshLambertMaterial({ color: isMansion ? 0xc8d8a8 : 0xa8c890 })
   );
-  yard.position.set(0, 0.20, 0); // sits just above sidewalk curb (0.18)
+  yard.position.set(0, 0.20, 0); 
   yard.receiveShadow = true;
   g.add(yard);
 
-  // ── Driveway ──
   const drive = new THREE.Mesh(
     new THREE.BoxGeometry(p.w * 0.35, 0.04, p.d/2 + 4),
     new THREE.MeshLambertMaterial({ color: 0x666666 })
@@ -3718,7 +3445,6 @@ function makePropertyMesh(p) {
   drive.receiveShadow = true;
   g.add(drive);
 
-  // ── Foundation (slightly larger base, dark) ──
   const fnd = new THREE.Mesh(
     new THREE.BoxGeometry(p.w + 0.6, 0.4, p.d + 0.6),
     new THREE.MeshLambertMaterial({ color:0x444444 })
@@ -3726,7 +3452,6 @@ function makePropertyMesh(p) {
   fnd.position.y = 0.2;
   g.add(fnd);
 
-  // ── Main wall ──
   const wallMat = new THREE.MeshPhongMaterial({ color:p.color, shininess:10 });
   const walls = new THREE.Mesh(
     new THREE.BoxGeometry(p.w, p.h, p.d),
@@ -3736,9 +3461,7 @@ function makePropertyMesh(p) {
   walls.castShadow = walls.receiveShadow = true;
   g.add(walls);
 
-  // ── Roof (pyramid for houses, flat with crown for mansion) ──
   if (isMansion) {
-    // Flat roof with crown
     const roof = new THREE.Mesh(
       new THREE.BoxGeometry(p.w + 0.8, 0.6, p.d + 0.8),
       new THREE.MeshPhongMaterial({ color:p.accent, shininess:60 })
@@ -3746,7 +3469,6 @@ function makePropertyMesh(p) {
     roof.position.y = 0.4 + p.h + 0.3;
     roof.castShadow = true;
     g.add(roof);
-    // Decorative columns at front
     [-1, 1].forEach(side => {
       const col = new THREE.Mesh(
         new THREE.CylinderGeometry(0.5, 0.5, p.h - 0.4, 12),
@@ -3756,7 +3478,6 @@ function makePropertyMesh(p) {
       col.castShadow = true;
       g.add(col);
     });
-    // Dome
     const dome = new THREE.Mesh(
       new THREE.SphereGeometry(p.w*0.18, 16, 12),
       new THREE.MeshPhongMaterial({ color:p.accent, shininess:120, specular:0x886600 })
@@ -3764,7 +3485,6 @@ function makePropertyMesh(p) {
     dome.position.y = 0.4 + p.h + 0.6 + p.w*0.18*0.5;
     g.add(dome);
   } else {
-    // Pitched pyramid roof
     const roofGeo = new THREE.ConeGeometry(Math.max(p.w, p.d) * 0.8, p.h * 0.55, 4);
     const roofMat = new THREE.MeshPhongMaterial({ color:p.accent, shininess:30 });
     const roof = new THREE.Mesh(roofGeo, roofMat);
@@ -3772,7 +3492,6 @@ function makePropertyMesh(p) {
     roof.position.y = 0.4 + p.h + p.h*0.55/2;
     roof.castShadow = true;
     g.add(roof);
-    // Chimney
     const chim = new THREE.Mesh(
       new THREE.BoxGeometry(0.8, 1.6, 0.8),
       new THREE.MeshLambertMaterial({ color:0x8b4513 })
@@ -3782,14 +3501,12 @@ function makePropertyMesh(p) {
     g.add(chim);
   }
 
-  // ── Door ──
   const door = new THREE.Mesh(
     new THREE.BoxGeometry(0.15, 2.4, 1.4),
     new THREE.MeshPhongMaterial({ color: isMansion ? 0xd4af37 : 0x4a2c1c, shininess: isMansion?100:20 })
   );
   door.position.set(p.w/2 + 0.07, 0.4 + 1.2, 0);
   g.add(door);
-  // Doorknob
   const knob = new THREE.Mesh(
     new THREE.SphereGeometry(0.08, 8, 8),
     new THREE.MeshPhongMaterial({ color:0xddd700, shininess:150 })
@@ -3797,13 +3514,12 @@ function makePropertyMesh(p) {
   knob.position.set(p.w/2 + 0.16, 0.4 + 1.2, -0.5);
   g.add(knob);
 
-  // ── Windows ── (front)
   const winMat = new THREE.MeshPhongMaterial({ color:0x88aacc, shininess:120, specular:0x4488cc });
   const winRows = isMansion ? 2 : Math.floor(p.h / 3);
   const winsPerRow = Math.max(2, Math.floor(p.w / 3));
   for (let row = 0; row < winRows; row++) {
     for (let i = 0; i < winsPerRow; i++) {
-      if (row === 0 && Math.abs(i - winsPerRow/2 + 0.5) < 1) continue; // skip front door area
+      if (row === 0 && Math.abs(i - winsPerRow/2 + 0.5) < 1) continue; 
       const win = new THREE.Mesh(
         new THREE.BoxGeometry(0.05, 1.0, 0.8),
         winMat
@@ -3813,7 +3529,6 @@ function makePropertyMesh(p) {
       g.add(win);
     }
   }
-  // Side windows
   [-1, 1].forEach(side => {
     for (let row = 0; row < winRows; row++) {
       const winsSide = Math.max(2, Math.floor(p.d / 3.5));
@@ -3829,7 +3544,6 @@ function makePropertyMesh(p) {
     }
   });
 
-  // ── Property sign (FOR SALE / OWNED) ──
   const signColor = ownedProperties.has(p.id) ? 0x44dd44 : 0xddaa00;
   const sign = new THREE.Mesh(
     new THREE.BoxGeometry(2.0, 0.8, 0.1),
@@ -3845,10 +3559,8 @@ function makePropertyMesh(p) {
   signPole.position.set(p.w/2 + 0.5, 0.8, p.d/2 + 1.5);
   g.add(signPole);
 
-  // ── Hedge / fence around perimeter ──
   const hedgeMat = new THREE.MeshLambertMaterial({ color:0x2d5d2d });
   const hedgeH = 1.0;
-  // front hedge with gap for driveway
   const gapW = p.w * 0.4;
   const hedgeFL = new THREE.Mesh(
     new THREE.BoxGeometry((p.w + 8 - gapW)/2 - 0.5, hedgeH, 0.5),
@@ -3860,7 +3572,6 @@ function makePropertyMesh(p) {
   hedgeFR.position.x = (p.w + 8)/4 + gapW/4;
   g.add(hedgeFR);
 
-  // ── Glow portal at door for interaction ──
   const portalGeo = new THREE.RingGeometry(1.0, 1.4, 24);
   const portalMat = new THREE.MeshBasicMaterial({
     color: ownedProperties.has(p.id) ? 0x44ff66 : 0xffd700,
@@ -3875,7 +3586,6 @@ function makePropertyMesh(p) {
   g.position.set(p.pos.x, 0, p.pos.z);
   scene.add(g);
 
-  // Add to collision: house body (roughly the wall box, same XZ)
   buildings.push({
     minX: p.pos.x - p.w/2, maxX: p.pos.x + p.w/2,
     minZ: p.pos.z - p.d/2, maxZ: p.pos.z + p.d/2
@@ -3885,13 +3595,11 @@ function makePropertyMesh(p) {
 }
 
 function updateProperties(dt) {
-  // Don't show prompts while inside mansion
   if (pState.inMansion) {
     document.getElementById('property-prompt').style.display = 'none';
     nearbyProperty = null;
     return;
   }
-  // Find nearest property within range
   let closest = null, closestDist = 4.5;
   for (const pm of propertyMeshes) {
     const px = pm.data.pos.x + pm.data.w/2 + 1.6;
@@ -3900,7 +3608,6 @@ function updateProperties(dt) {
     const dz = pState.pos.z - pz;
     const d = Math.sqrt(dx*dx + dz*dz);
     if (d < closestDist) { closestDist = d; closest = pm; }
-    // Animate portal pulse
     pm.group.children.forEach(c => {
       if (c.userData && c.userData.isPortal) {
         c.material.opacity = 0.45 + 0.2 * Math.sin(performance.now()*0.003);
@@ -3918,9 +3625,8 @@ function updateProperties(dt) {
     document.getElementById('pp-price').textContent = '$' + closest.data.price.toLocaleString('es-CL');
     if (isOwn) {
       document.getElementById('pp-status').textContent = '✓ Tu propiedad';
-      document.getElementById('pp-action').innerHTML = closest.data.type === 'mansion'
-        ? 'Pulsa <b>B</b> para entrar 🏛️'
-        : '🏡 Casa Augusto';
+      // MODIFICADO: Mensaje adaptado para cualquier propiedad
+      document.getElementById('pp-action').innerHTML = `Pulsa <b>B</b> para entrar ${closest.data.type === 'mansion' ? '🏛️' : '🚪'}`;
       prompt.classList.add('owned');
       prompt.classList.remove('cant-afford');
     } else if (!canAfford) {
@@ -3939,13 +3645,12 @@ function updateProperties(dt) {
   }
 }
 
+// MODIFICADO: Ahora permite entrar a cualquier propiedad que sea tuya
 function tryBuyOrEnterProperty() {
   if (!nearbyProperty) return;
   const p = nearbyProperty.data;
   if (ownedProperties.has(p.id)) {
-    // Already owned: enter mansion
-    if (p.type === 'mansion') enterMansion();
-    else addFeed(`🏡 Estás en ${p.name}`);
+    enterProperty(p);
     return;
   }
   if (pState.money < p.price) {
@@ -3956,7 +3661,6 @@ function tryBuyOrEnterProperty() {
   ownedProperties.add(p.id);
   saveOwned();
   updateMoney();
-  // Repaint sign and portal green
   nearbyProperty.group.children.forEach(c => {
     if (c.userData && c.userData.isPortal) c.material.color.setHex(0x44ff66);
     if (c.userData && c.userData.isPropertySign) {
@@ -3980,12 +3684,14 @@ function updateMoney() {
   document.getElementById('money-val').textContent = pState.money.toLocaleString('es-CL');
 }
 
-/* ─── MANSION INTERIOR ─── */
-function buildMansionInterior() {
+/* ─── INTERIOR (GENERALIZADO) ─── */
+function buildInterior(data) {
   const g = new THREE.Group();
-  const W = 30, D = 24, H = 6;
+  const isMansion = data.type === 'mansion';
+  const W = isMansion ? 30 : 14;
+  const D = isMansion ? 24 : 14;
+  const H = isMansion ? 6 : 4;
 
-  // Marble floor
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(W, D),
     new THREE.MeshPhongMaterial({ color:0xf0e8d8, shininess:60 })
@@ -3994,7 +3700,6 @@ function buildMansionInterior() {
   floor.receiveShadow = true;
   g.add(floor);
 
-  // Ceiling
   const ceil = new THREE.Mesh(
     new THREE.PlaneGeometry(W, D),
     new THREE.MeshLambertMaterial({ color:0xfff8e8 })
@@ -4003,24 +3708,22 @@ function buildMansionInterior() {
   ceil.position.y = H;
   g.add(ceil);
 
-  // Walls (4 sides)
   const wallMat = new THREE.MeshLambertMaterial({ color:0xe8d8b8 });
-  // Back wall
   const wb = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.4), wallMat);
   wb.position.set(0, H/2, -D/2);
   g.add(wb);
-  // Front wall (with door opening — split into two)
+  
   const wfL = new THREE.Mesh(new THREE.BoxGeometry((W-3)/2, H, 0.4), wallMat);
   wfL.position.set(-(W/4 + 0.75), H/2, D/2);
   g.add(wfL);
   const wfR = wfL.clone();
   wfR.position.x = (W/4 + 0.75);
   g.add(wfR);
-  // Lintel above door
+  
   const wfTop = new THREE.Mesh(new THREE.BoxGeometry(3, H - 2.5, 0.4), wallMat);
   wfTop.position.set(0, H - (H - 2.5)/2, D/2);
   g.add(wfTop);
-  // Side walls
+  
   const wL = new THREE.Mesh(new THREE.BoxGeometry(0.4, H, D), wallMat);
   wL.position.set(-W/2, H/2, 0);
   g.add(wL);
@@ -4028,107 +3731,31 @@ function buildMansionInterior() {
   wR.position.x = W/2;
   g.add(wR);
 
-  // Interior collision (the four walls minus the door gap)
   const interiorWalls = [
-    { minX:-W/2, maxX: W/2,   minZ:-D/2 - 0.3, maxZ:-D/2 + 0.3 }, // back
-    { minX:-W/2 - 0.3, maxX:-W/2 + 0.3, minZ:-D/2, maxZ:D/2 }, // left
-    { minX: W/2 - 0.3, maxX: W/2 + 0.3, minZ:-D/2, maxZ:D/2 }, // right
-    { minX:-W/2, maxX:-1.5, minZ:D/2 - 0.3, maxZ:D/2 + 0.3 }, // front-L
-    { minX: 1.5, maxX: W/2, minZ:D/2 - 0.3, maxZ:D/2 + 0.3 }, // front-R
+    { minX:-W/2, maxX: W/2,   minZ:-D/2 - 0.3, maxZ:-D/2 + 0.3 }, 
+    { minX:-W/2 - 0.3, maxX:-W/2 + 0.3, minZ:-D/2, maxZ:D/2 }, 
+    { minX: W/2 - 0.3, maxX: W/2 + 0.3, minZ:-D/2, maxZ:D/2 }, 
+    { minX:-W/2, maxX:-1.5, minZ:D/2 - 0.3, maxZ:D/2 + 0.3 }, 
+    { minX: 1.5, maxX: W/2, minZ:D/2 - 0.3, maxZ:D/2 + 0.3 }, 
   ];
 
-  // ── Furniture ──
   const woodMat = new THREE.MeshPhongMaterial({ color:0x8b5a3c, shininess:30 });
-  const sofaMat = new THREE.MeshPhongMaterial({ color:0x6a3a3a, shininess:5 });
-  // Long sofa
-  const sofa = new THREE.Mesh(new THREE.BoxGeometry(6, 1.2, 1.6), sofaMat);
-  sofa.position.set(-6, 0.6, -D/2 + 2);
-  sofa.castShadow = true;
+  const sofa = new THREE.Mesh(new THREE.BoxGeometry(4, 1.2, 1.6), new THREE.MeshPhongMaterial({ color:0x6a3a3a }));
+  sofa.position.set(-W/4, 0.6, -D/4);
   g.add(sofa);
-  const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(6, 1.2, 0.4), sofaMat);
-  sofaBack.position.set(-6, 1.2, -D/2 + 1.4);
-  g.add(sofaBack);
-  // Coffee table
-  const table = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.5, 1.2), woodMat);
-  table.position.set(-6, 0.25, -D/2 + 4.5);
-  g.add(table);
-  // Dining table
-  const dt = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 2.0), woodMat);
-  dt.position.set(7, 1.0, -3);
-  g.add(dt);
-  // Dining table legs
-  [[-1.8,-0.9],[1.8,-0.9],[-1.8,0.9],[1.8,0.9]].forEach(([dx,dz]) => {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.0, 0.2), woodMat);
-    leg.position.set(7 + dx, 0.5, -3 + dz);
-    g.add(leg);
-  });
-  // Chairs around dining table
-  for (let i = 0; i < 6; i++) {
-    const angle = (i / 6) * Math.PI * 2;
-    const cx = 7 + Math.cos(angle) * 1.6;
-    const cz = -3 + Math.sin(angle) * 1.4;
-    const ch = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), woodMat);
-    ch.position.set(cx, 0.5, cz);
-    g.add(ch);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.1), woodMat);
-    back.position.set(cx, 0.95, cz - 0.25);
-    back.lookAt(7, 0.95, -3);
-    g.add(back);
-  }
-  // Fireplace
-  const fp = new THREE.Mesh(new THREE.BoxGeometry(3, 2.5, 0.6), new THREE.MeshLambertMaterial({ color:0x8b6f47 }));
-  fp.position.set(0, 1.25, -D/2 + 0.5);
-  g.add(fp);
-  const fire = new THREE.Mesh(
-    new THREE.BoxGeometry(1.5, 0.8, 0.3),
-    new THREE.MeshBasicMaterial({ color:0xff6622 })
-  );
-  fire.position.set(0, 0.6, -D/2 + 0.85);
-  g.add(fire);
-  // Chandelier
-  const chand = new THREE.Mesh(
-    new THREE.SphereGeometry(0.6, 16, 12),
-    new THREE.MeshBasicMaterial({ color:0xfff0c0 })
-  );
-  chand.position.set(0, H - 1.5, 0);
-  g.add(chand);
-  const chandLight = new THREE.PointLight(0xfff0c0, 0.8, 25);
-  chandLight.position.copy(chand.position);
-  g.add(chandLight);
-  // Carpet
-  const carpet = new THREE.Mesh(
-    new THREE.PlaneGeometry(8, 5),
-    new THREE.MeshLambertMaterial({ color:0x5a2828 })
-  );
-  carpet.rotation.x = -Math.PI/2;
-  carpet.position.set(-6, 0.03, -D/2 + 4);
-  g.add(carpet);
-  // Wall art (frames on side walls)
-  for (let i = 0; i < 3; i++) {
-    const frame = new THREE.Mesh(
-      new THREE.BoxGeometry(0.1, 1.5, 1.2),
-      new THREE.MeshPhongMaterial({ color:0xc9a227, shininess:80 })
-    );
-    frame.position.set(-W/2 + 0.3, 3, -8 + i*5);
-    g.add(frame);
-    const canvas = new THREE.Mesh(
-      new THREE.BoxGeometry(0.05, 1.3, 1.0),
-      new THREE.MeshLambertMaterial({ color: i===0?0x884422:i===1?0x224488:0x448822 })
-    );
-    canvas.position.set(-W/2 + 0.35, 3, -8 + i*5);
-    g.add(canvas);
-  }
-  // Stairs going up (decorative)
-  for (let i = 0; i < 8; i++) {
-    const step = new THREE.Mesh(
-      new THREE.BoxGeometry(3, 0.25, 0.6 + i*0.04),
-      woodMat
-    );
-    step.position.set(W/2 - 4, 0.125 + i*0.25, D/2 - 5 - i*0.6);
-    g.add(step);
+
+  if (isMansion) {
+    const table = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 2.0), woodMat);
+    table.position.set(7, 1.0, -3);
+    g.add(table);
+    const chand = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), new THREE.MeshBasicMaterial({ color:0xfff0c0 }));
+    chand.position.set(0, H - 1.5, 0);
+    g.add(chand);
+    const chandLight = new THREE.PointLight(0xfff0c0, 0.8, 25);
+    chandLight.position.copy(chand.position);
+    g.add(chandLight);
   }
 
-  // EXIT trigger plane (visual)
   const exit = new THREE.Mesh(
     new THREE.RingGeometry(1.0, 1.4, 24),
     new THREE.MeshBasicMaterial({ color:0xff4444, transparent:true, opacity:0.6, side:THREE.DoubleSide })
@@ -4138,40 +3765,27 @@ function buildMansionInterior() {
   exit.userData.isExitPortal = true;
   g.add(exit);
 
-  // Welcome label (HTML overlay alternative: a simple emissive box)
-  const welcomeBox = new THREE.Mesh(
-    new THREE.BoxGeometry(5, 0.8, 0.1),
-    new THREE.MeshBasicMaterial({ color:0xc9a227 })
-  );
-  welcomeBox.position.set(0, H - 1, -D/2 + 0.3);
-  g.add(welcomeBox);
-
   g.position.set(0, 0, 0);
   return { group: g, walls: interiorWalls, exitPos: { x: 0, z: D/2 - 0.5 } };
 }
 
-function enterMansion() {
-  if (pState.inMansion) return;
-  const data = PROPERTIES_DATA.find(p => p.id === 'mansion');
-  if (!data) return;
+function enterProperty(data) {
+  if (pState.inMansion) return; 
 
-  // Stash exterior collision and player return spot
   mansionReturnPos = { x: data.pos.x + data.w/2 + 4, z: data.pos.z };
   for (const b of buildings) buildingsBackup.push(b);
   buildings.length = 0;
 
-  // Hide exterior world (we'll hide via fog/teleport — easier: teleport to an offset)
-  // Build interior (or reuse if cached)
-  if (!mansionInterior) mansionInterior = buildMansionInterior();
-  mansionInterior.group.position.set(0, 0, 5000); // far offset to hide from world
+  if (mansionInterior) scene.remove(mansionInterior.group);
+  
+  mansionInterior = buildInterior(data);
+  mansionInterior.group.position.set(0, 0, 5000); 
   scene.add(mansionInterior.group);
 
-  // Move player into mansion (offset by same 5000 in Z)
   pState.pos.x = 0;
-  pState.pos.z = 5000 + 8;
-  pState.inMansion = true;
+  pState.pos.z = 5000 + mansionInterior.exitPos.z - 2; 
+  pState.inMansion = true; 
 
-  // Push interior collisions (offset)
   for (const w of mansionInterior.walls) {
     buildings.push({
       minX: w.minX, maxX: w.maxX,
@@ -4179,26 +3793,21 @@ function enterMansion() {
     });
   }
 
-  addFeed('🏛️ Bienvenido a la Mansión Augusto');
-  // Calmer atmosphere
+  addFeed(`🚪 Entraste a: ${data.name}`);
   scene.fog = new THREE.FogExp2(0xfff0d8, 0.025);
 }
 
 function exitMansion() {
   if (!pState.inMansion) return;
-  // Remove interior from scene
   if (mansionInterior) scene.remove(mansionInterior.group);
-  // Restore exterior collisions
   buildings.length = 0;
   for (const b of buildingsBackup) buildings.push(b);
   buildingsBackup.length = 0;
-  // Teleport back near mansion door
   pState.pos.x = mansionReturnPos.x;
   pState.pos.z = mansionReturnPos.z;
   pState.inMansion = false;
-  // Restore outdoor fog
   scene.fog = new THREE.FogExp2(0xa8c8e8, 0.0035);
-  addFeed('🚪 Saliste de la mansión');
+  addFeed('🚪 Saliste de la propiedad');
 }
 
 function checkMansionExit() {
@@ -4210,7 +3819,6 @@ function checkMansionExit() {
   if (Math.sqrt(dx*dx + dz*dz) < 1.6) exitMansion();
 }
 
-// Hook B key to buy/enter
 window.addEventListener('keydown', e => {
   if (e.code === 'KeyB' && gameRunning && !playerDead) {
     if (pState.inMansion) checkMansionExit();
@@ -4224,9 +3832,8 @@ window.addEventListener('keydown', e => {
 ═══════════════════════════════════════════════════ */
 init();
 
-
 /* ═══════════════════════════════════════════════════
-   AG BRIDGE — Reporta puntaje al shell AugustoGames
+   AG BRIDGE
 ═══════════════════════════════════════════════════ */
 (function(){
   const GAME_ID = 'gta_augusto';
@@ -4236,18 +3843,16 @@ init();
     lastSent = score;
     try { window.parent.postMessage({ type:'ag_score', game: GAME_ID, score: score|0 }, '*'); } catch(e){}
   };
-  // Game over screen observer
   const gs = document.getElementById('gameover-screen');
   if (gs) {
     new MutationObserver(() => {
       if (gs.style.display === 'flex' && typeof pState !== 'undefined') send(pState.score || 0);
     }).observe(gs, { attributes: true, attributeFilter: ['style'] });
   }
-  // Missions-all-done check (victory)
   setInterval(() => {
     try {
       if (typeof mState !== 'undefined' && mState.allDone && typeof pState !== 'undefined') {
-        send((pState.score || 0) + 1); // +1 marker so victory != last death
+        send((pState.score || 0) + 1); 
       }
     } catch(e){}
   }, 2500);
