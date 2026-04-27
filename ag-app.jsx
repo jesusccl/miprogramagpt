@@ -80,7 +80,7 @@ function GameModal({ game, onClose, onScore }) {
           }}>🏆 Récord: {best.score.toLocaleString()}</div>
         ) : null; })()}
 
-        <div style={{marginLeft:'auto',color:'var(--muted)',fontSize:12,display:'flex',alignItems:'center',gap:6}}>
+        <div style={{marginLeft:'auto',color:'var(--muted)',fontSize:12,display:'flex',alignItems:'center',gap:6}} className="ag-esc-hint">
           <kbd style={{background:'var(--surface2)',border:'1px solid var(--border)',
             borderRadius:6,padding:'2px 8px',fontSize:11}}>ESC</kbd> para salir
         </div>
