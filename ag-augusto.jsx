@@ -85,4 +85,8 @@ function WWEAugustoGame() {
   return <AugustoIframe src="wwe.html" title="WWE Augusto" aspectRatio="16 / 10" />;
 }
 
-Object.assign(window, { GTAAugustoGame, MinecraftAugustoGame, WWEAugustoGame });
+function LaureanoNightmareGame() {
+  return <AugustoIframe src="laureano-nightmare.html" title="AugustoNightmare" aspectRatio="16 / 10" />;
+}
+
+Object.assign(window, { GTAAugustoGame, MinecraftAugustoGame, WWEAugustoGame, LaureanoNightmareGame });

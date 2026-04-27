@@ -12,6 +12,7 @@ const GAMES_DATA = [
   { id:'gta_augusto',       title:'GTA Augusto',       cat:'action',   catLabel:'Acción',     emoji:'🚗', bg:'#2d0d1a', accent:'#a855f7', plays:'9.9M', rating:5.0, desc:'Augusto recorre la ciudad esquivando tráfico y la policía, recolectando billetes' },
   { id:'minecraft_augusto', title:'Minecraft Augusto', cat:'puzzle',   catLabel:'Puzzle',     emoji:'⛏️', bg:'#0d2d1a', accent:'#22c55e', plays:'7.5M', rating:4.9, desc:'Mina bloques, colecciona recursos y construye en el mundo de Augusto' },
   { id:'wwe_augusto',       title:'WWE Augusto',       cat:'action',   catLabel:'Acción',     emoji:'🤼', bg:'#2d1a0d', accent:'#ef4444', plays:'6.6M', rating:4.8, desc:'Augusto sube al ring y derrota a los luchadores con su Stunner final' },
+  { id:'laureano_nightmare',title:"AugustoNightmare", cat:'horror', catLabel:'Terror',     emoji:'🩸', bg:'#1a0606', accent:'#d04040', plays:'NUEVO',rating:4.7, desc:'Sobrevive a La Monja en el sótano. Recolecta 4 llaves y escapa por la azotea ⚠️ Terror' },
 ];
 
 const CATEGORIES = [
@@ -20,6 +21,7 @@ const CATEGORIES = [
   { id:'puzzle',   label:'Puzzle',      icon:'🧩' },
   { id:'action',   label:'Acción',      icon:'⚡' },
   { id:'strategy', label:'Estrategia',  icon:'♟️' },
+  { id:'horror',   label:'Terror',      icon:'🩸' },
 ];
 
 // ===================== SCORE HELPERS =====================
