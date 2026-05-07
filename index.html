@@ -48,6 +48,72 @@
   @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── MOBILE RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    :root {
+      --sidebar-w: 240px;
+      --header-h: 56px;
+    }
+    /* Make sidebar a drawer that slides in from the left */
+    aside.ag-sidebar {
+      position: fixed !important;
+      top: var(--header-h);
+      left: 0;
+      bottom: 0;
+      z-index: 90;
+      background: var(--bg) !important;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 8px 0 24px rgba(0,0,0,0.5);
+    }
+    aside.ag-sidebar.open { transform: translateX(0); }
+    /* Backdrop while drawer open */
+    .ag-sidebar-backdrop {
+      position: fixed; inset: 0; top: var(--header-h);
+      background: rgba(0,0,0,0.5); z-index: 85;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .ag-sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+    /* Hamburger button visible only on mobile */
+    .ag-hamburger { display: flex !important; }
+    /* Header tweaks: smaller, search shrinks */
+    header.ag-header { padding: 0 10px !important; gap: 6px !important; }
+    header.ag-header .ag-logo-text { display: none !important; }
+    header.ag-header .ag-search-wrap { max-width: none !important; }
+    header.ag-header .ag-profile-btn span.ag-profile-name {
+      max-width: 60px !important; font-size: 11px !important;
+    }
+    /* Main content padding */
+    main.ag-main { padding: 12px !important; }
+    /* Smaller cards on mobile */
+    .ag-cards-grid { gap: 10px !important; }
+    .ag-cards-grid > div { min-width: 140px !important; }
+    /* Augusto section cards a bit smaller */
+    .ag-augusto-grid { gap: 12px !important; }
+    /* Featured banner stacked vertically */
+    .ag-featured-banner {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      padding: 18px !important;
+      gap: 12px !important;
+    }
+    .ag-featured-banner h2 { font-size: 22px !important; }
+    .ag-featured-banner .ag-featured-emoji {
+      font-size: 64px !important;
+      align-self: center;
+    }
+  }
+  @media (max-width: 380px) {
+    .ag-cards-grid > div { min-width: 130px !important; }
+    .ag-augusto-grid > div { min-width: 200px !important; }
+  }
+  /* Hamburger is hidden on desktop */
+  .ag-hamburger { display: none; }
+  /* ESC hint hidden on mobile (no keyboard) */
+  @media (max-width: 768px) {
+    .ag-esc-hint { display: none !important; }
+  }
 </style>
 </head>
 <body>

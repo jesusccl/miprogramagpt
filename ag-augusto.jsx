@@ -46,7 +46,7 @@ function AugustoIframe({ src, title, aspectRatio }) {
           src={src}
           title={title}
           onLoad={() => setLoaded(true)}
-          allow="gamepad; fullscreen; accelerometer; gyroscope; autoplay"
+          allow="gamepad; fullscreen; accelerometer; gyroscope; autoplay; pointer-lock"
           allowFullScreen
           style={{
             width:'100%',height:'100%',border:'none',display:'block',

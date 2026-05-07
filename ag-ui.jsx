@@ -48,13 +48,20 @@ function getProfile() {
 }
 
 // ===================== HEADER =====================
-function Header({ onSearch, searchVal, onProfile, profile }) {
+function Header({ onSearch, searchVal, onProfile, profile, onMenu }) {
   return (
-    <header style={{
+    <header className="ag-header" style={{
       height:'var(--header-h)', background:'rgba(7,7,26,0.97)', backdropFilter:'blur(16px)',
       borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center',
       padding:'0 16px', gap:12, position:'sticky', top:0, zIndex:100, flexShrink:0,
     }}>
+      <button onClick={onMenu} className="ag-hamburger" aria-label="Menú" style={{
+        width:36, height:36, borderRadius:8,
+        background:'var(--surface2)', border:'1px solid var(--border)',
+        alignItems:'center', justifyContent:'center', flexShrink:0,
+        color:'var(--text)', fontSize:18, padding:0,
+      }}>☰</button>
+
       <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
         <div style={{
           width:36, height:36, borderRadius:10,
@@ -62,14 +69,14 @@ function Header({ onSearch, searchVal, onProfile, profile }) {
           display:'flex', alignItems:'center', justifyContent:'center', fontSize:18,
           boxShadow:'0 0 16px rgba(168,85,247,0.4)',
         }}>🎮</div>
-        <span style={{fontFamily:'var(--font-display)',fontWeight:900,fontSize:18,
+        <span className="ag-logo-text" style={{fontFamily:'var(--font-display)',fontWeight:900,fontSize:18,
           background:'linear-gradient(90deg,var(--purple),var(--cyan))',
           WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',whiteSpace:'nowrap'}}>
           AugustoGames
         </span>
       </div>
 
-      <div style={{flex:1,maxWidth:400,position:'relative',minWidth:0}}>
+      <div className="ag-search-wrap" style={{flex:1,maxWidth:400,position:'relative',minWidth:0}}>
         <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--muted)',fontSize:14,pointerEvents:'none'}}>🔍</span>
         <input value={searchVal} onChange={e=>onSearch(e.target.value)} placeholder="Buscar juegos..."
           style={{width:'100%',padding:'8px 12px 8px 36px',borderRadius:99,
@@ -79,7 +86,7 @@ function Header({ onSearch, searchVal, onProfile, profile }) {
           onBlur={e=>e.target.style.borderColor='var(--border)'}/>
       </div>
 
-      <button onClick={onProfile} title="Perfil" style={{
+      <button onClick={onProfile} title="Perfil" className="ag-profile-btn" style={{
         marginLeft:'auto', display:'flex', alignItems:'center', gap:8,
         background:'var(--surface2)', border:'1px solid var(--border)',
         borderRadius:99, padding:'6px 14px 6px 10px', cursor:'pointer',
@@ -89,24 +96,26 @@ function Header({ onSearch, searchVal, onProfile, profile }) {
       onMouseOver={e=>e.currentTarget.style.background='var(--surface3)'}
       onMouseOut={e=>e.currentTarget.style.background='var(--surface2)'}>
         <span style={{fontSize:20}}>{profile.avatar}</span>
-        <span style={{maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{profile.name}</span>
+        <span className="ag-profile-name" style={{maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{profile.name}</span>
       </button>
     </header>
   );
 }
 
 // ===================== SIDEBAR =====================
-function Sidebar({ active, onCat, onPlay }) {
+function Sidebar({ active, onCat, onPlay, open, onClose }) {
   const top3 = [...GAMES_DATA].sort((a,b)=>parseFloat(b.rating)-parseFloat(a.rating)).slice(0,3);
+  const handleCat = (id) => { onCat(id); if (onClose) onClose(); };
+  const handlePlay = (g) => { onPlay(g); if (onClose) onClose(); };
   return (
-    <aside style={{
+    <aside className={'ag-sidebar' + (open ? ' open' : '')} style={{
       width:'var(--sidebar-w)',borderRight:'1px solid var(--border)',
       padding:'16px 10px',display:'flex',flexDirection:'column',gap:4,
       overflowY:'auto',flexShrink:0,
     }}>
       <div style={{color:'var(--muted)',fontSize:10,fontWeight:800,letterSpacing:'0.12em',padding:'0 8px',marginBottom:4}}>CATEGORÍAS</div>
       {CATEGORIES.map(c=>(
-        <button key={c.id} onClick={()=>onCat(c.id)} style={{
+        <button key={c.id} onClick={()=>handleCat(c.id)} style={{
           display:'flex',alignItems:'center',gap:10,padding:'9px 12px',
           borderRadius:10,background:active===c.id?'var(--surface3)':'transparent',
           border:`1px solid ${active===c.id?'rgba(168,85,247,0.3)':'transparent'}`,
@@ -124,7 +133,7 @@ function Sidebar({ active, onCat, onPlay }) {
       <div style={{height:1,background:'var(--border)',margin:'10px 0'}}/>
       <div style={{color:'var(--muted)',fontSize:10,fontWeight:800,letterSpacing:'0.12em',padding:'0 8px',marginBottom:4}}>TOP JUEGOS</div>
       {top3.map(g=>(
-        <div key={g.id} onClick={()=>onPlay(g)} style={{
+        <div key={g.id} onClick={()=>handlePlay(g)} style={{
           padding:'8px 10px',borderRadius:10,cursor:'pointer',
           display:'flex',alignItems:'center',gap:10,transition:'background 0.15s',
         }}
@@ -212,7 +221,7 @@ function FeaturedBanner({ onPlay }) {
   if (!g) return null;
 
   return (
-    <div style={{
+    <div className="ag-featured-banner" style={{
       borderRadius:16,
       background:`linear-gradient(135deg,${g.bg} 0%,#0d0d22 55%,#1a0d20 100%)`,
       border:`1px solid ${g.accent}44`,
@@ -264,7 +273,7 @@ function FeaturedBanner({ onPlay }) {
       </div>
 
       {/* Giant emoji with glow */}
-      <div style={{
+      <div className="ag-featured-emoji" style={{
         fontSize:96,flexShrink:0,
         filter:`drop-shadow(0 0 32px ${g.accent}88)`,
         animation:'pulse 3s ease infinite',
@@ -310,12 +319,82 @@ function AugustoSection({ onPlay }) {
         <span style={{color:'var(--muted)',fontSize:12,background:'var(--surface2)',
           borderRadius:99,padding:'2px 10px',border:'1px solid var(--border)'}}>Exclusivos</span>
       </div>
-      <div style={{
+      <div className="ag-augusto-grid" style={{
         display:'grid',
         gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',
         gap:16,
       }}>
         {games.map((g,i) => <AugustoCard key={g.id} game={g} onClick={onPlay} delay={i*0.06}/>)}
+      </div>
+    </div>
+  );
+}
+
+// ===================== YOUTUBE SECTION (canal Augusto Clive) =====================
+const YT_CHANNEL = 'augustoclive';
+const YT_VIDEO_ID = 'Jtcph0O3-vk';
+
+function YouTubeSection() {
+  const [loaded, setLoaded] = React.useState(false);
+  return (
+    <div style={{marginBottom:26, animation:'fadeUp 0.4s ease 0.05s both'}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap'}}>
+        <div style={{
+          width:34, height:34, borderRadius:10,
+          background:'linear-gradient(135deg,#ff0000,#cc0000)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          fontSize:16, color:'#fff', fontWeight:900,
+          boxShadow:'0 0 16px rgba(255,0,0,0.4)',
+        }}>▶</div>
+        <h2 style={{fontFamily:'var(--font-display)',fontWeight:900,fontSize:20,
+          background:'linear-gradient(90deg,#ff0000,#ff6b6b)',
+          WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent'}}>
+          Canal de Augusto Clive
+        </h2>
+        <a href={`https://youtube.com/@${YT_CHANNEL}`} target="_blank" rel="noopener noreferrer"
+          style={{
+            marginLeft:'auto',
+            background:'#ff0000', color:'#fff',
+            borderRadius:99, padding:'6px 16px',
+            fontSize:12, fontWeight:800, fontFamily:'var(--font-body)',
+            textDecoration:'none', display:'inline-flex', alignItems:'center', gap:6,
+            boxShadow:'0 4px 14px rgba(255,0,0,0.3)',
+            transition:'transform 0.15s, box-shadow 0.2s',
+          }}
+          onMouseOver={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 6px 20px rgba(255,0,0,0.5)';}}
+          onMouseOut={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='0 4px 14px rgba(255,0,0,0.3)';}}>
+          ▶ Ver canal completo
+        </a>
+      </div>
+      <div style={{
+        position:'relative', width:'100%', maxWidth:900,
+        aspectRatio:'16 / 9',
+        borderRadius:14, overflow:'hidden',
+        border:'1px solid rgba(255,0,0,0.3)',
+        boxShadow:'0 12px 40px rgba(0,0,0,0.5), 0 0 30px rgba(255,0,0,0.15)',
+        background:'#000',
+      }}>
+        {!loaded && (
+          <div style={{
+            position:'absolute', inset:0, display:'flex',
+            alignItems:'center', justifyContent:'center',
+            color:'var(--muted)', fontSize:14, zIndex:1,
+          }}>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:32, marginBottom:8, animation:'pulse 1.5s ease infinite'}}>▶</div>
+              <div>Cargando video…</div>
+            </div>
+          </div>
+        )}
+        <iframe
+          src={`https://www.youtube.com/embed/${YT_VIDEO_ID}?rel=0`}
+          title="Augusto Clive — Video destacado"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          onLoad={() => setLoaded(true)}
+          style={{position:'absolute', inset:0, width:'100%', height:'100%', border:'none'}}
+        />
       </div>
     </div>
   );
@@ -596,6 +675,7 @@ function AppShell({ onPlay }) {
   const [showLeaderboard,setShowLeaderboard]=React.useState(false);
   const [showProfile,setShowProfile]=React.useState(false);
   const [profile,setProfile]=React.useState(getProfile);
+  const [drawerOpen,setDrawerOpen]=React.useState(false);
 
   React.useEffect(()=>{
     const handler=()=>setProfile(getProfile());
@@ -608,21 +688,25 @@ function AppShell({ onPlay }) {
   const filtered = GAMES_DATA.filter(g => {
     if (cat !== 'all' && g.cat !== cat) return false;
     if (search && !g.title.toLowerCase().includes(search.toLowerCase()) && !g.catLabel.toLowerCase().includes(search.toLowerCase())) return false;
-    // On home, Augusto games live in their own dedicated section — don't duplicate them in the main grid
     if (isHome && AUGUSTO_IDS.includes(g.id)) return false;
     return true;
   });
 
   return (
     <div style={{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden'}}>
-      <Header onSearch={setSearch} searchVal={search} onProfile={()=>setShowProfile(true)} profile={profile}/>
-      <div style={{display:'flex',flex:1,overflow:'hidden'}}>
-        <Sidebar active={cat} onCat={setCat} onPlay={onPlay}/>
-        <main style={{flex:1,overflowY:'auto',padding:'20px'}}>
+      <Header onSearch={setSearch} searchVal={search} onProfile={()=>setShowProfile(true)}
+        profile={profile} onMenu={()=>setDrawerOpen(o=>!o)}/>
+      <div style={{display:'flex',flex:1,overflow:'hidden',position:'relative'}}>
+        <div className={'ag-sidebar-backdrop' + (drawerOpen ? ' open' : '')}
+          onClick={()=>setDrawerOpen(false)}/>
+        <Sidebar active={cat} onCat={setCat} onPlay={onPlay}
+          open={drawerOpen} onClose={()=>setDrawerOpen(false)}/>
+        <main className="ag-main" style={{flex:1,overflowY:'auto',padding:'20px'}}>
           {isHome && <FeaturedBanner onPlay={onPlay}/>}
           {isHome && <AugustoSection onPlay={onPlay}/>}
+          {isHome && <YouTubeSection/>}
 
-          <div style={{marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
+          <div style={{marginBottom:14,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
             <h2 style={{fontFamily:'var(--font-display)',fontWeight:900,fontSize:18}}>
               {search?`"${search}"`:cat==='all'?'Más Juegos':CATEGORIES.find(c=>c.id===cat)?.label}
             </h2>
@@ -645,7 +729,7 @@ function AppShell({ onPlay }) {
               <div style={{fontSize:16,fontWeight:700}}>No se encontraron juegos</div>
             </div>
           ):(
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))',gap:14}}>
+            <div className="ag-cards-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))',gap:14}}>
               {filtered.map((g,i)=><GameCard key={g.id} game={g} onClick={onPlay} delay={i*0.04}/>)}
             </div>
           )}
