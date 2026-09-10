@@ -1,0 +1,42 @@
+name: APK Mis Gastos
+
+on:
+  push:
+    paths:
+      - 'gastos-app/**'
+      - '.github/workflows/apk-mis-gastos.yml'
+  pull_request:
+    paths:
+      - 'gastos-app/**'
+  workflow_dispatch:
+
+jobs:
+  compilar:
+    name: Pruebas y APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Pruebas
+        working-directory: gastos-app
+        run: ./gradlew testDebugUnitTest
+
+      - name: Compilar APK de release
+        working-directory: gastos-app
+        run: ./gradlew assembleRelease
+
+      - name: Publicar el APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mis-gastos-apk
+          path: gastos-app/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error

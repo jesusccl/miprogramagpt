@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mis Gastos — App para registrar tus gastos</title>
+<meta name="description" content="App Android gratuita para anotar tus gastos por categoría: alimentación, bencina, deudas y las que quieras. Sin cuentas ni internet."/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Exo+2:wght@700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #07071a;
+    --surface: #0f0f28;
+    --surface2: #181835;
+    --border: rgba(255,255,255,0.08);
+    --text: #eeeeff;
+    --muted: #8f8fbb;
+    --violeta: #7d5cff;
+    --cyan: #1fb6c9;
+    --font-display: 'Exo 2', sans-serif;
+    --font-body: 'Nunito', sans-serif;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(900px 500px at 15% -10%, rgba(125,92,255,0.30), transparent 60%),
+      radial-gradient(700px 450px at 90% 0%, rgba(31,182,201,0.20), transparent 60%);
+  }
+  .envoltura { position: relative; z-index: 1; max-width: 880px; margin: 0 auto; padding: 40px 20px 72px; }
+  a { color: inherit; text-decoration: none; }
+
+  header { display: flex; align-items: center; gap: 18px; margin-bottom: 28px; flex-wrap: wrap; }
+  .icono {
+    width: 84px; height: 84px; border-radius: 22px; flex-shrink: 0;
+    background: linear-gradient(135deg, #6d3bf5, #1fb6c9);
+    display: grid; place-items: center; font-size: 42px;
+    box-shadow: 0 12px 40px rgba(109,59,245,0.45);
+  }
+  h1 { font-family: var(--font-display); font-size: clamp(2rem, 6vw, 2.8rem); line-height: 1.1; }
+  .bajada { color: var(--muted); font-size: 1.05rem; }
+  .volver { display: inline-block; color: var(--muted); font-size: .9rem; margin-bottom: 22px; }
+  .volver:hover { color: var(--text); }
+
+  .descarga {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 22px; margin: 28px 0;
+  }
+  .boton {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, #6d3bf5, #8f6bff);
+    color: #fff; font-weight: 800; font-size: 1.05rem;
+    padding: 15px 26px; border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(109,59,245,0.4);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .boton:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(109,59,245,0.55); }
+  .peso { color: var(--muted); font-size: .92rem; }
+
+  h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 36px 0 14px; }
+  .rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .carta {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 18px;
+  }
+  .carta h3 { font-size: 1.05rem; margin-bottom: 6px; }
+  .carta p { color: var(--muted); font-size: .95rem; }
+  .carta .emoji { font-size: 1.6rem; display: block; margin-bottom: 8px; }
+
+  .categorias { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 6px; }
+  .chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 8px 15px; font-size: .93rem; font-weight: 600;
+  }
+
+  ol.pasos { counter-reset: paso; list-style: none; display: grid; gap: 12px; }
+  ol.pasos li {
+    position: relative; padding-left: 46px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding-top: 14px; padding-bottom: 14px; padding-right: 16px;
+  }
+  ol.pasos li::before {
+    counter-increment: paso; content: counter(paso);
+    position: absolute; left: 14px; top: 13px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--violeta); color: #fff;
+    display: grid; place-items: center; font-size: .85rem; font-weight: 800;
+  }
+  .nota {
+    border-left: 3px solid var(--cyan);
+    background: rgba(31,182,201,0.08);
+    border-radius: 0 12px 12px 0; padding: 14px 16px; margin-top: 16px;
+    color: var(--muted); font-size: .95rem;
+  }
+  footer { margin-top: 44px; color: var(--muted); font-size: .88rem; text-align: center; }
+  footer a { color: var(--violeta); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <a class="volver" href="/">← Volver a AugustoGames</a>
+
+  <header>
+    <div class="icono">👛</div>
+    <div>
+      <h1>Mis Gastos</h1>
+      <p class="bajada">Anota en qué se te va la plata, mes a mes y por categoría.</p>
+    </div>
+  </header>
+
+  <div class="descarga">
+    <a class="boton" href="/mis-gastos.apk" download>⬇ Descargar APK</a>
+    <div>
+      <div><strong>Android 8.0 o superior</strong></div>
+      <div class="peso">1,1 MB · gratis · sin publicidad</div>
+    </div>
+  </div>
+
+  <h2>Qué trae</h2>
+  <div class="rejilla">
+    <div class="carta">
+      <span class="emoji">⚡</span>
+      <h3>Registro en segundos</h3>
+      <p>Monto, categoría y listo. Botones de montos rápidos y atajos de Hoy / Ayer para no perder tiempo.</p>
+    </div>
+    <div class="carta">
+      <span class="emoji">🍩</span>
+      <h3>Resumen del mes</h3>
+      <p>Total gastado, anillo con la repartición por categoría y comparación con el mes anterior.</p>
+    </div>
+    <div class="carta">
+      <span class="emoji">🎯</span>
+      <h3>Presupuestos</h3>
+      <p>Pon un tope mensual por categoría. La barra se pone roja apenas te pasas.</p>
+    </div>
+    <div class="carta">
+      <span class="emoji">🔎</span>
+      <h3>Historial</h3>
+      <p>Gastos agrupados por día, con buscador y filtro por categoría. Se editan con un toque.</p>
+    </div>
+    <div class="carta">
+      <span class="emoji">📤</span>
+      <h3>Exportar a CSV</h3>
+      <p>Manda tus gastos a Excel, Sheets o por WhatsApp cuando quieras.</p>
+    </div>
+    <div class="carta">
+      <span class="emoji">🔒</span>
+      <h3>Todo en tu teléfono</h3>
+      <p>Sin cuentas, sin internet y sin permisos. Los datos no salen del equipo.</p>
+    </div>
+  </div>
+
+  <h2>Categorías que vienen listas</h2>
+  <div class="categorias">
+    <span class="chip">🍽️ Alimentación</span>
+    <span class="chip">⛽ Bencina</span>
+    <span class="chip">💳 Deudas</span>
+    <span class="chip">🏠 Arriendo / Hogar</span>
+    <span class="chip">💡 Cuentas y servicios</span>
+    <span class="chip">🚌 Transporte</span>
+    <span class="chip">🏥 Salud</span>
+    <span class="chip">🎬 Entretención</span>
+    <span class="chip">📚 Educación</span>
+    <span class="chip">👕 Vestuario</span>
+    <span class="chip">🐾 Mascotas</span>
+    <span class="chip">📦 Otros</span>
+  </div>
+  <p class="nota">Puedes crear las tuyas con el emoji, el color y el tope mensual que quieras.</p>
+
+  <h2>Cómo instalarla</h2>
+  <ol class="pasos">
+    <li>Descarga el APK <strong>desde el teléfono</strong> con el botón de arriba.</li>
+    <li>Abre el archivo descargado. Android va a pedir permiso para instalar apps de origen desconocido: actívalo para el navegador y vuelve atrás.</li>
+    <li>Toca <strong>Instalar</strong>. La app queda como <strong>Mis Gastos</strong> en tu pantalla de inicio.</li>
+  </ol>
+  <p class="nota">Google Play muestra un aviso porque el archivo no viene de la tienda; es lo normal al instalar un APK a mano.</p>
+
+  <footer>
+    Código y detalles en <a href="https://github.com/jesusccl/miprogramagpt/tree/main/gastos-app">GitHub</a>.
+  </footer>
+</div>
+</body>
+</html>
