@@ -7,6 +7,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -16,6 +18,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import cl.augustogames.gastos.data.Tema
+
+/**
+ * Colores que Material 3 no define pero la app necesita (el verde del dinero que entra).
+ * Van en un CompositionLocal para que respeten el tema elegido, no el del sistema.
+ */
+data class ColoresExtra(
+    val ingreso: Color,
+    val ingresoSuave: Color,
+    val sobreIngreso: Color
+)
+
+private val ExtraClaro = ColoresExtra(
+    ingreso = Color(0xFF1B7F4B),
+    ingresoSuave = Color(0xFFD7F2E2),
+    sobreIngreso = Color.White
+)
+private val ExtraOscuro = ColoresExtra(
+    ingreso = Color(0xFF5FDD9B),
+    ingresoSuave = Color(0xFF12321F),
+    sobreIngreso = Color(0xFF07301B)
+)
+
+val LocalColoresExtra = staticCompositionLocalOf { ExtraClaro }
 
 private val Violeta = Color(0xFF6D3BF5)
 private val VioletaClaro = Color(0xFFCFC0FF)
@@ -99,5 +124,7 @@ fun MisGastosTheme(tema: Tema, contenido: @Composable () -> Unit) {
         }
     }
 
-    MaterialTheme(colorScheme = esquema, typography = Tipografia, content = contenido)
+    CompositionLocalProvider(LocalColoresExtra provides if (oscuro) ExtraOscuro else ExtraClaro) {
+        MaterialTheme(colorScheme = esquema, typography = Tipografia, content = contenido)
+    }
 }

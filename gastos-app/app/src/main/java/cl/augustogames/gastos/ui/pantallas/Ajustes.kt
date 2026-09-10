@@ -48,7 +48,9 @@ import java.time.LocalDate
 fun PantallaAjustes(modifier: Modifier = Modifier) {
     val contexto = LocalContext.current
     val ajustes = Repositorio.ajustes
-    val gastos = Repositorio.gastos
+    val movimientos = Repositorio.movimientos
+    val cuantosGastos = movimientos.count { !it.esIngreso }
+    val cuantosIngresos = movimientos.count { it.esIngreso }
     var confirmarBorrado by remember { mutableStateOf(false) }
 
     Column(
@@ -89,11 +91,12 @@ fun PantallaAjustes(modifier: Modifier = Modifier) {
         }
 
         Tarjeta(titulo = "Tus datos") {
-            val primerGasto = gastos.minByOrNull { it.fecha }?.fecha
+            val primero = movimientos.minByOrNull { it.fecha }?.fecha
             Text(
                 buildString {
-                    append("${gastos.size} ${if (gastos.size == 1) "gasto guardado" else "gastos guardados"}")
-                    if (primerGasto != null) append(" desde el ${Formato.fechaCorta(primerGasto)}")
+                    append("$cuantosGastos ${if (cuantosGastos == 1) "gasto" else "gastos"}")
+                    append(" y $cuantosIngresos ${if (cuantosIngresos == 1) "ingreso" else "ingresos"}")
+                    if (primero != null) append(" desde el ${Formato.fechaCorta(primero)}")
                     append(".")
                 },
                 style = MaterialTheme.typography.bodyMedium
@@ -108,7 +111,7 @@ fun PantallaAjustes(modifier: Modifier = Modifier) {
             Spacer(Modifier.height(12.dp))
             Button(
                 onClick = { compartirCsv(contexto) },
-                enabled = gastos.isNotEmpty(),
+                enabled = movimientos.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.Share, contentDescription = null)
@@ -118,7 +121,7 @@ fun PantallaAjustes(modifier: Modifier = Modifier) {
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = { confirmarBorrado = true },
-                enabled = gastos.isNotEmpty(),
+                enabled = movimientos.isNotEmpty(),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
                 ),
@@ -126,14 +129,14 @@ fun PantallaAjustes(modifier: Modifier = Modifier) {
             ) {
                 Icon(Icons.Default.Delete, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Borrar todos los gastos")
+                Text("Borrar todo el historial")
             }
         }
 
         Tarjeta(titulo = "Acerca de") {
             Text("Mis Gastos ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
             Text(
-                "App para llevar la cuenta de lo que gastas mes a mes, por categoría.",
+                "App para llevar la cuenta de lo que entra y lo que sale, mes a mes y por categoría.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
@@ -144,11 +147,11 @@ fun PantallaAjustes(modifier: Modifier = Modifier) {
     if (confirmarBorrado) {
         AlertDialog(
             onDismissRequest = { confirmarBorrado = false },
-            title = { Text("¿Borrar todos los gastos?") },
-            text = { Text("Se eliminarán los ${gastos.size} gastos registrados. Las categorías se mantienen. Esto no se puede deshacer.") },
+            title = { Text("¿Borrar todo el historial?") },
+            text = { Text("Se eliminarán los ${movimientos.size} movimientos registrados (gastos e ingresos). Las categorías se mantienen. Esto no se puede deshacer.") },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
-                    Repositorio.borrarTodosLosGastos()
+                    Repositorio.borrarTodosLosMovimientos()
                     confirmarBorrado = false
                 }) { Text("Borrar todo", color = MaterialTheme.colorScheme.error) }
             },

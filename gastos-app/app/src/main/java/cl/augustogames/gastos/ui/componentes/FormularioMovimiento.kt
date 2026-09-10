@@ -7,10 +7,10 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,6 +29,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -43,10 +46,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cl.augustogames.gastos.data.Categoria
-import cl.augustogames.gastos.data.Gasto
 import cl.augustogames.gastos.data.MetodoPago
+import cl.augustogames.gastos.data.Movimiento
 import cl.augustogames.gastos.data.Repositorio
+import cl.augustogames.gastos.data.TipoMovimiento
 import cl.augustogames.gastos.ui.Formato
+import cl.augustogames.gastos.ui.theme.LocalColoresExtra
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -54,44 +59,58 @@ import java.time.ZoneOffset
 private val MONTOS_RAPIDOS = listOf(1_000L, 2_000L, 5_000L, 10_000L, 20_000L)
 
 /**
- * Hoja para crear o editar un gasto.
+ * Hoja para crear o editar un movimiento (gasto o ingreso).
  *
- * @param gasto null para crear uno nuevo; si viene con datos, se edita ese gasto.
+ * @param movimiento null para crear uno nuevo; si viene con datos, se edita ese.
+ * @param tipoInicial con qué pestaña se abre el formulario al crear.
  * @param fechaSugerida fecha con la que se abre el formulario al crear.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun FormularioGasto(
-    gasto: Gasto?,
+fun FormularioMovimiento(
+    movimiento: Movimiento?,
+    tipoInicial: TipoMovimiento,
     fechaSugerida: LocalDate,
     onCerrar: () -> Unit
 ) {
     val estadoHoja = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val categorias = Repositorio.categorias
+    val colores = LocalColoresExtra.current
     val simbolo = Repositorio.ajustes.simbolo
 
     // Se guarda con rememberSaveable (y en tipos simples) para no perder lo escrito
     // si el teléfono se rota o Android recrea la pantalla.
-    var monto by rememberSaveable { mutableStateOf(gasto?.monto?.takeIf { it > 0 }?.toString() ?: "") }
-    var categoriaId by rememberSaveable {
-        mutableStateOf(gasto?.categoriaId ?: categorias.firstOrNull()?.id.orEmpty())
+    var tipoNombre by rememberSaveable {
+        mutableStateOf((movimiento?.tipo ?: tipoInicial).name)
     }
+    var monto by rememberSaveable {
+        mutableStateOf(movimiento?.monto?.takeIf { it > 0 }?.toString() ?: "")
+    }
+    var categoriaId by rememberSaveable { mutableStateOf(movimiento?.categoriaId.orEmpty()) }
     var diaEpoca by rememberSaveable {
-        mutableStateOf((gasto?.fecha ?: fechaSugerida).toEpochDay())
+        mutableStateOf((movimiento?.fecha ?: fechaSugerida).toEpochDay())
     }
-    var nota by rememberSaveable { mutableStateOf(gasto?.nota.orEmpty()) }
+    var nota by rememberSaveable { mutableStateOf(movimiento?.nota.orEmpty()) }
     var metodoNombre by rememberSaveable {
-        mutableStateOf((gasto?.metodo ?: MetodoPago.EFECTIVO).name)
+        mutableStateOf((movimiento?.metodo ?: MetodoPago.EFECTIVO).name)
     }
     var mostrarCalendario by rememberSaveable { mutableStateOf(false) }
     var confirmarBorrado by rememberSaveable { mutableStateOf(false) }
 
+    val tipo = TipoMovimiento.desde(tipoNombre)
+    val esIngreso = tipo == TipoMovimiento.INGRESO
     val fecha = LocalDate.ofEpochDay(diaEpoca)
-    val metodo = MetodoPago.desde(metodoNombre)
+    val categorias = Repositorio.categoriasDe(tipo)
+    val metodos = MetodoPago.para(tipo)
+    val metodo = MetodoPago.desde(metodoNombre).let { if (it in metodos) it else MetodoPago.EFECTIVO }
 
+    // Al cambiar de gasto a ingreso (o al revés) la categoría elegida ya no sirve.
+    val categoriaElegida = categorias.firstOrNull { it.id == categoriaId }
+        ?: categorias.firstOrNull()
     val valor = monto.toLongOrNull() ?: 0L
-    val valido = valor > 0 && categoriaId.isNotBlank()
+    val valido = valor > 0 && categoriaElegida != null
     val hoy = LocalDate.now()
+
+    val colorAcento = if (esIngreso) colores.ingreso else MaterialTheme.colorScheme.primary
 
     ModalBottomSheet(onDismissRequest = onCerrar, sheetState = estadoHoja) {
         Column(
@@ -105,15 +124,35 @@ fun FormularioGasto(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = if (gasto == null) "Nuevo gasto" else "Editar gasto",
+                text = if (movimiento == null) "Nuevo movimiento"
+                else "Editar ${tipo.etiqueta.lowercase()}",
                 style = MaterialTheme.typography.titleLarge
             )
+
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                TipoMovimiento.entries.forEachIndexed { indice, opcion ->
+                    SegmentedButton(
+                        selected = tipo == opcion,
+                        onClick = { tipoNombre = opcion.name },
+                        shape = SegmentedButtonDefaults.itemShape(indice, TipoMovimiento.entries.size),
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = if (opcion == TipoMovimiento.INGRESO)
+                                colores.ingresoSuave else MaterialTheme.colorScheme.primaryContainer,
+                            activeContentColor = if (opcion == TipoMovimiento.INGRESO)
+                                colores.ingreso else MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        label = {
+                            Text(if (opcion == TipoMovimiento.INGRESO) "Ingreso 💰" else "Gasto 🧾")
+                        }
+                    )
+                }
+            }
 
             CampoMonto(
                 texto = monto,
                 onCambio = { monto = it },
                 simbolo = simbolo,
-                etiqueta = "Monto",
+                etiqueta = if (esIngreso) "Cuánto entró" else "Cuánto gastaste",
                 grande = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -138,7 +177,7 @@ fun FormularioGasto(
                 categorias.forEach { categoria ->
                     ChipCategoria(
                         categoria = categoria,
-                        seleccionada = categoria.id == categoriaId,
+                        seleccionada = categoria.id == categoriaElegida?.id,
                         onClick = { categoriaId = categoria.id }
                     )
                 }
@@ -164,9 +203,12 @@ fun FormularioGasto(
                 )
             }
 
-            Text("Forma de pago", style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (esIngreso) "Cómo lo recibiste" else "Forma de pago",
+                style = MaterialTheme.typography.titleMedium
+            )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetodoPago.entries.forEach { opcion ->
+                metodos.forEach { opcion ->
                     FilterChip(
                         selected = opcion == metodo,
                         onClick = { metodoNombre = opcion.name },
@@ -180,39 +222,53 @@ fun FormularioGasto(
                 onValueChange = { nota = it.take(120) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Detalle (opcional)") },
-                placeholder = { Text("Ej: supermercado de la semana") },
+                placeholder = {
+                    Text(
+                        if (esIngreso) "Ej: sueldo de septiembre"
+                        else "Ej: supermercado de la semana"
+                    )
+                },
                 singleLine = true
             )
 
             Button(
                 onClick = {
-                    val guardado = gasto?.copy(
+                    val idCategoria = categoriaElegida?.id ?: return@Button
+                    val guardado = movimiento?.copy(
                         monto = valor,
-                        categoriaId = categoriaId,
+                        categoriaId = idCategoria,
                         fecha = fecha,
                         nota = nota.trim(),
-                        metodo = metodo
-                    ) ?: Gasto(
+                        metodo = metodo,
+                        tipo = tipo
+                    ) ?: Movimiento(
                         monto = valor,
-                        categoriaId = categoriaId,
+                        categoriaId = idCategoria,
                         fecha = fecha,
                         nota = nota.trim(),
-                        metodo = metodo
+                        metodo = metodo,
+                        tipo = tipo
                     )
-                    if (gasto == null) Repositorio.agregarGasto(guardado)
-                    else Repositorio.actualizarGasto(guardado)
+                    if (movimiento == null) Repositorio.agregarMovimiento(guardado)
+                    else Repositorio.actualizarMovimiento(guardado)
                     onCerrar()
                 },
                 enabled = valido,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colorAcento,
+                    contentColor = if (esIngreso) colores.sobreIngreso
+                    else MaterialTheme.colorScheme.onPrimary
+                ),
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Text(
-                    if (valido) "Guardar ${Formato.monto(valor, simbolo)}" else "Guardar gasto",
+                    if (valido) "Guardar ${Formato.monto(valor, simbolo)}"
+                    else "Guardar ${tipo.etiqueta.lowercase()}",
                     style = MaterialTheme.typography.titleMedium
                 )
             }
 
-            if (gasto != null) {
+            if (movimiento != null) {
                 TextButton(
                     onClick = { confirmarBorrado = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -222,7 +278,7 @@ fun FormularioGasto(
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Eliminar gasto")
+                    Text("Eliminar ${movimiento.tipo.etiqueta.lowercase()}")
                 }
             }
         }
@@ -251,14 +307,19 @@ fun FormularioGasto(
         }
     }
 
-    if (confirmarBorrado && gasto != null) {
+    if (confirmarBorrado && movimiento != null) {
         AlertDialog(
             onDismissRequest = { confirmarBorrado = false },
-            title = { Text("¿Eliminar este gasto?") },
-            text = { Text("Se borrará ${Formato.monto(gasto.monto, simbolo)} del ${Formato.fechaCorta(gasto.fecha)}.") },
+            title = { Text("¿Eliminar este ${movimiento.tipo.etiqueta.lowercase()}?") },
+            text = {
+                Text(
+                    "Se borrará ${Formato.monto(movimiento.monto, simbolo)} " +
+                        "del ${Formato.fechaCorta(movimiento.fecha)}."
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    Repositorio.eliminarGasto(gasto.id)
+                    Repositorio.eliminarMovimiento(movimiento.id)
                     confirmarBorrado = false
                     onCerrar()
                 }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }

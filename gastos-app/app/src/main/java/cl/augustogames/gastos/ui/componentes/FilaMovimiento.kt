@@ -14,24 +14,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import cl.augustogames.gastos.data.Gasto
+import cl.augustogames.gastos.data.Movimiento
 import cl.augustogames.gastos.data.Repositorio
 import cl.augustogames.gastos.ui.Formato
+import cl.augustogames.gastos.ui.theme.LocalColoresExtra
 
-/** Una línea de la lista de gastos: categoría, detalle y monto. */
+/**
+ * Una línea de la lista: categoría, detalle y monto.
+ * Los ingresos se muestran en verde y con un "+" adelante.
+ */
 @Composable
-fun FilaGasto(
-    gasto: Gasto,
+fun FilaMovimiento(
+    movimiento: Movimiento,
     simbolo: String,
     onClick: () -> Unit,
     mostrarFecha: Boolean = false,
+    conSigno: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val categoria = Repositorio.categoriaODefecto(gasto.categoriaId)
+    val categoria = Repositorio.categoriaODefecto(movimiento.categoriaId, movimiento.tipo)
     val detalle = buildList {
-        if (gasto.nota.isNotBlank()) add(gasto.nota)
-        add(gasto.metodo.etiqueta)
-        if (mostrarFecha) add(Formato.fechaCorta(gasto.fecha))
+        if (movimiento.nota.isNotBlank()) add(movimiento.nota)
+        add(movimiento.metodo.etiqueta)
+        if (mostrarFecha) add(Formato.fechaCorta(movimiento.fecha))
     }.joinToString(" · ")
 
     Row(
@@ -59,8 +64,11 @@ fun FilaGasto(
             )
         }
         Text(
-            Formato.monto(gasto.monto, simbolo),
-            style = MaterialTheme.typography.titleMedium
+            text = if (conSigno) Formato.montoConSigno(movimiento.monto, movimiento.esIngreso, simbolo)
+            else Formato.monto(movimiento.monto, simbolo),
+            style = MaterialTheme.typography.titleMedium,
+            color = if (movimiento.esIngreso) LocalColoresExtra.current.ingreso
+            else MaterialTheme.colorScheme.onSurface
         )
     }
 }

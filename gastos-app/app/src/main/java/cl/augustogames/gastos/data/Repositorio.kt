@@ -21,11 +21,13 @@ import java.time.YearMonth
 object Repositorio {
 
     private const val NOMBRE_ARCHIVO = "mis-gastos.json"
-    private const val VERSION_DATOS = 1
+
+    /** 1: solo gastos (app 1.0) · 2: gastos e ingresos (app 1.1). */
+    private const val VERSION_DATOS = 2
 
     private var archivo: File? = null
 
-    val gastos = mutableStateListOf<Gasto>()
+    val movimientos = mutableStateListOf<Movimiento>()
     val categorias = mutableStateListOf<Categoria>()
 
     var ajustes by mutableStateOf(Ajustes())
@@ -47,32 +49,39 @@ object Repositorio {
     /** Deja el repositorio como recién abierto; se usa en las pruebas. */
     internal fun reiniciar(contexto: Context) {
         archivo = null
-        gastos.clear()
+        movimientos.clear()
         categorias.clear()
         ajustes = Ajustes()
         inicializar(contexto)
     }
 
-    // ─────────────────────────────  Gastos  ─────────────────────────────
+    // ───────────────────────────  Movimientos  ──────────────────────────
 
-    fun agregarGasto(gasto: Gasto) {
-        gastos.add(gasto)
-        ordenarGastos()
+    fun agregarMovimiento(movimiento: Movimiento) {
+        movimientos.add(movimiento)
+        ordenarMovimientos()
         guardar()
     }
 
-    fun actualizarGasto(gasto: Gasto) {
-        val indice = gastos.indexOfFirst { it.id == gasto.id }
-        if (indice >= 0) gastos[indice] = gasto else gastos.add(gasto)
-        ordenarGastos()
+    fun actualizarMovimiento(movimiento: Movimiento) {
+        val indice = movimientos.indexOfFirst { it.id == movimiento.id }
+        if (indice >= 0) movimientos[indice] = movimiento else movimientos.add(movimiento)
+        ordenarMovimientos()
         guardar()
     }
 
-    fun eliminarGasto(id: String) {
-        if (gastos.removeAll { it.id == id }) guardar()
+    fun eliminarMovimiento(id: String) {
+        if (movimientos.removeAll { it.id == id }) guardar()
+    }
+
+    fun borrarTodosLosMovimientos() {
+        movimientos.clear()
+        guardar()
     }
 
     // ───────────────────────────  Categorías  ───────────────────────────
+
+    fun categoriasDe(tipo: TipoMovimiento): List<Categoria> = categorias.filter { it.tipo == tipo }
 
     fun guardarCategoria(categoria: Categoria) {
         val indice = categorias.indexOfFirst { it.id == categoria.id }
@@ -80,15 +89,20 @@ object Repositorio {
         guardar()
     }
 
-    /** Borra la categoría y manda sus gastos a "Otros" para no perder historial. */
+    /**
+     * Borra la categoría y manda sus movimientos a la categoría comodín de su mismo tipo
+     * ("Otros" o "Otros ingresos") para no perder historial.
+     */
     fun eliminarCategoria(id: String) {
-        if (id == ID_CATEGORIA_OTROS) return
-        if (categorias.none { it.id == ID_CATEGORIA_OTROS }) {
-            categorias.add(CATEGORIAS_INICIALES.first { it.id == ID_CATEGORIA_OTROS })
+        val categoria = categoria(id) ?: return
+        val comodin = idCategoriaComodin(categoria.tipo)
+        if (id == comodin) return
+        if (categorias.none { it.id == comodin }) {
+            CATEGORIAS_INICIALES.firstOrNull { it.id == comodin }?.let { categorias.add(it) }
         }
-        for (i in gastos.indices) {
-            if (gastos[i].categoriaId == id) {
-                gastos[i] = gastos[i].copy(categoriaId = ID_CATEGORIA_OTROS)
+        for (i in movimientos.indices) {
+            if (movimientos[i].categoriaId == id) {
+                movimientos[i] = movimientos[i].copy(categoriaId = comodin)
             }
         }
         categorias.removeAll { it.id == id }
@@ -97,9 +111,10 @@ object Repositorio {
 
     fun categoria(id: String): Categoria? = categorias.firstOrNull { it.id == id }
 
-    fun categoriaODefecto(id: String): Categoria =
-        categoria(id) ?: categorias.firstOrNull { it.id == ID_CATEGORIA_OTROS }
-        ?: Categoria(ID_CATEGORIA_OTROS, "Sin categoría", "📦", 0xFF78909C)
+    fun categoriaODefecto(id: String, tipo: TipoMovimiento = TipoMovimiento.GASTO): Categoria =
+        categoria(id)
+            ?: categoria(idCategoriaComodin(tipo))
+            ?: Categoria(idCategoriaComodin(tipo), "Sin categoría", "📦", 0xFF78909C, tipo = tipo)
 
     fun restablecerCategorias() {
         val existentes = categorias.map { it.id }.toSet()
@@ -114,30 +129,37 @@ object Repositorio {
         guardar()
     }
 
-    fun borrarTodosLosGastos() {
-        gastos.clear()
-        guardar()
-    }
-
     // ────────────────────────────  Consultas  ───────────────────────────
 
-    fun gastosDe(mes: YearMonth): List<Gasto> = gastos.filter { it.mes == mes }
+    fun movimientosDe(mes: YearMonth): List<Movimiento> = movimientos.filter { it.mes == mes }
 
-    fun totalDe(mes: YearMonth): Long = gastosDe(mes).sumOf { it.monto }
+    fun gastosDe(mes: YearMonth): List<Movimiento> =
+        movimientos.filter { it.mes == mes && it.tipo == TipoMovimiento.GASTO }
 
-    /** Meses que tienen al menos un gasto, del más nuevo al más antiguo. */
-    fun mesesConGastos(): List<YearMonth> =
-        gastos.map { it.mes }.distinct().sortedDescending()
+    fun ingresosDe(mes: YearMonth): List<Movimiento> =
+        movimientos.filter { it.mes == mes && it.tipo == TipoMovimiento.INGRESO }
+
+    fun totalDe(mes: YearMonth, tipo: TipoMovimiento): Long =
+        movimientos.filter { it.mes == mes && it.tipo == tipo }.sumOf { it.monto }
+
+    fun balanceDe(mes: YearMonth): BalanceMes = BalanceMes(
+        ingresos = totalDe(mes, TipoMovimiento.INGRESO),
+        gastos = totalDe(mes, TipoMovimiento.GASTO)
+    )
+
+    /** Meses que tienen al menos un movimiento, del más nuevo al más antiguo. */
+    fun mesesConMovimientos(): List<YearMonth> =
+        movimientos.map { it.mes }.distinct().sortedDescending()
 
     /** Totales por categoría de un periodo, ordenados de mayor a menor. */
-    fun totalesPorCategoria(gastosDelPeriodo: List<Gasto>): List<TotalCategoria> {
-        val total = gastosDelPeriodo.sumOf { it.monto }.toFloat()
-        return gastosDelPeriodo
+    fun totalesPorCategoria(periodo: List<Movimiento>): List<TotalCategoria> {
+        val total = periodo.sumOf { it.monto }.toFloat()
+        return periodo
             .groupBy { it.categoriaId }
             .map { (idCategoria, lista) ->
                 val suma = lista.sumOf { it.monto }
                 TotalCategoria(
-                    categoria = categoriaODefecto(idCategoria),
+                    categoria = categoriaODefecto(idCategoria, lista.first().tipo),
                     total = suma,
                     cantidad = lista.size,
                     porcentaje = if (total <= 0f) 0f else suma / total
@@ -146,28 +168,32 @@ object Repositorio {
             .sortedByDescending { it.total }
     }
 
-    /** Gasto total del día indicado. */
-    fun totalDelDia(dia: LocalDate): Long = gastos.filter { it.fecha == dia }.sumOf { it.monto }
+    /** Total gastado el día indicado. */
+    fun gastoDelDia(dia: LocalDate): Long =
+        movimientos.filter { it.fecha == dia && it.tipo == TipoMovimiento.GASTO }.sumOf { it.monto }
 
     // ────────────────────────────  CSV  ─────────────────────────────────
 
     fun exportarCsv(): String = buildString {
-        appendLine("fecha;categoria;monto;metodo;nota")
-        gastos.sortedWith(compareBy({ it.fecha }, { it.creado })).forEach { gasto ->
-            val categoria = categoriaODefecto(gasto.categoriaId).nombre
-            val nota = gasto.nota.replace(";", ",").replace("\n", " ")
-            appendLine("${gasto.fecha};$categoria;${gasto.monto};${gasto.metodo.etiqueta};$nota")
+        appendLine("fecha;tipo;categoria;monto;metodo;nota")
+        movimientos.sortedWith(compareBy({ it.fecha }, { it.creado })).forEach { movimiento ->
+            val categoria = categoriaODefecto(movimiento.categoriaId, movimiento.tipo).nombre
+            val nota = movimiento.nota.replace(";", ",").replace("\n", " ")
+            appendLine(
+                "${movimiento.fecha};${movimiento.tipo.etiqueta};$categoria;" +
+                    "${movimiento.monto};${movimiento.metodo.etiqueta};$nota"
+            )
         }
     }
 
     // ─────────────────────────  Persistencia  ───────────────────────────
 
-    private fun ordenarGastos() {
-        val ordenados = gastos.sortedWith(
-            compareByDescending<Gasto> { it.fecha }.thenByDescending { it.creado }
+    private fun ordenarMovimientos() {
+        val ordenados = movimientos.sortedWith(
+            compareByDescending<Movimiento> { it.fecha }.thenByDescending { it.creado }
         )
-        gastos.clear()
-        gastos.addAll(ordenados)
+        movimientos.clear()
+        movimientos.addAll(ordenados)
     }
 
     private fun sembrarCategorias() {
@@ -191,19 +217,21 @@ object Repositorio {
                         put("emoji", categoria.emoji)
                         put("color", categoria.color)
                         put("presupuesto", categoria.presupuesto)
+                        put("tipo", categoria.tipo.name)
                     })
                 }
             })
-            put("gastos", JSONArray().apply {
-                gastos.forEach { gasto ->
+            put("movimientos", JSONArray().apply {
+                movimientos.forEach { movimiento ->
                     put(JSONObject().apply {
-                        put("id", gasto.id)
-                        put("monto", gasto.monto)
-                        put("categoriaId", gasto.categoriaId)
-                        put("fecha", gasto.fecha.toString())
-                        put("nota", gasto.nota)
-                        put("metodo", gasto.metodo.name)
-                        put("creado", gasto.creado)
+                        put("id", movimiento.id)
+                        put("monto", movimiento.monto)
+                        put("categoriaId", movimiento.categoriaId)
+                        put("fecha", movimiento.fecha.toString())
+                        put("nota", movimiento.nota)
+                        put("metodo", movimiento.metodo.name)
+                        put("tipo", movimiento.tipo.name)
+                        put("creado", movimiento.creado)
                     })
                 }
             })
@@ -231,30 +259,41 @@ object Repositorio {
                         nombre = item.optString("nombre"),
                         emoji = item.optString("emoji", "📦"),
                         color = item.optLong("color", 0xFF78909C),
-                        presupuesto = item.optLong("presupuesto", 0L)
+                        presupuesto = item.optLong("presupuesto", 0L),
+                        // Los archivos de la versión 1.0 no traen tipo: eran todos gastos.
+                        tipo = TipoMovimiento.desde(item.optString("tipo"))
                     )
                 )
             }
+            // Al actualizar desde la 1.0 no existían las categorías de ingreso.
+            if (categorias.none { it.tipo == TipoMovimiento.INGRESO }) {
+                categorias.addAll(CATEGORIAS_INGRESO_INICIALES)
+            }
         }
 
-        gastos.clear()
-        val gastosJson = raiz.optJSONArray("gastos") ?: JSONArray()
-        for (i in 0 until gastosJson.length()) {
-            val item = gastosJson.getJSONObject(i)
+        movimientos.clear()
+        // "gastos" es el nombre que usaba la versión 1.0 del archivo.
+        val movimientosJson = raiz.optJSONArray("movimientos")
+            ?: raiz.optJSONArray("gastos")
+            ?: JSONArray()
+        for (i in 0 until movimientosJson.length()) {
+            val item = movimientosJson.getJSONObject(i)
+            val tipo = TipoMovimiento.desde(item.optString("tipo"))
             val fecha = runCatching { LocalDate.parse(item.optString("fecha")) }
                 .getOrDefault(LocalDate.now())
-            gastos.add(
-                Gasto(
+            movimientos.add(
+                Movimiento(
                     id = item.optString("id"),
                     monto = item.optLong("monto"),
-                    categoriaId = item.optString("categoriaId", ID_CATEGORIA_OTROS),
+                    categoriaId = item.optString("categoriaId", idCategoriaComodin(tipo)),
                     fecha = fecha,
                     nota = item.optString("nota"),
                     metodo = MetodoPago.desde(item.optString("metodo")),
+                    tipo = tipo,
                     creado = item.optLong("creado", System.currentTimeMillis())
                 )
             )
         }
-        ordenarGastos()
+        ordenarMovimientos()
     }
 }

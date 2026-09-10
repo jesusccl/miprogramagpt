@@ -31,6 +31,12 @@ class FormatoTest {
     }
 
     @Test
+    fun `marca los ingresos con mas y los gastos con menos`() {
+        assertEquals("+$800.000", Formato.montoConSigno(800_000, esIngreso = true))
+        assertEquals("\u2212$12.500", Formato.montoConSigno(12_500, esIngreso = false))
+    }
+
+    @Test
     fun `escribe meses y fechas en espanol`() {
         assertEquals("Septiembre 2026", Formato.mesAnio(YearMonth.of(2026, 9)))
         assertEquals("3 mar", Formato.fechaCorta(LocalDate.of(2026, 3, 3)))

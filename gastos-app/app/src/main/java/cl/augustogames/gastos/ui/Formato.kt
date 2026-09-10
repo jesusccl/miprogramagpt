@@ -19,6 +19,10 @@ object Formato {
 
     fun monto(valor: Long, simbolo: String = "$"): String = "$simbolo${miles(valor)}"
 
+    /** Monto con signo para las listas donde se mezclan gastos e ingresos. */
+    fun montoConSigno(valor: Long, esIngreso: Boolean, simbolo: String = "$"): String =
+        if (esIngreso) "+${monto(valor, simbolo)}" else "\u2212${monto(valor, simbolo)}"
+
     /** Versión compacta para etiquetas de gráficos: $12,5K · $1,2M */
     fun montoCorto(valor: Long, simbolo: String = "$"): String = when {
         abs(valor) >= 1_000_000 -> "$simbolo${unaDecimal(valor / 1_000_000.0)}M"

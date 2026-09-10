@@ -1,11 +1,13 @@
 package cl.augustogames.gastos.ui
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -16,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -24,21 +27,27 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import cl.augustogames.gastos.data.Gasto
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import cl.augustogames.gastos.data.Movimiento
 import cl.augustogames.gastos.data.Repositorio
-import cl.augustogames.gastos.ui.componentes.FormularioGasto
+import cl.augustogames.gastos.data.TipoMovimiento
+import cl.augustogames.gastos.ui.componentes.FormularioMovimiento
 import cl.augustogames.gastos.ui.pantallas.PantallaAjustes
 import cl.augustogames.gastos.ui.pantallas.PantallaCategorias
-import cl.augustogames.gastos.ui.pantallas.PantallaGastos
+import cl.augustogames.gastos.ui.pantallas.PantallaHistorial
 import cl.augustogames.gastos.ui.pantallas.PantallaResumen
+import cl.augustogames.gastos.ui.theme.LocalColoresExtra
 import java.time.LocalDate
 import java.time.YearMonth
 
 enum class Destino(val etiqueta: String, val icono: ImageVector) {
     RESUMEN("Resumen", Icons.Default.Home),
-    GASTOS("Gastos", Icons.AutoMirrored.Filled.List),
+    HISTORIAL("Historial", Icons.AutoMirrored.Filled.List),
     CATEGORIAS("Categorías", Icons.Default.ShoppingCart),
     AJUSTES("Ajustes", Icons.Default.Settings)
 }
@@ -50,10 +59,19 @@ fun AppGastos() {
     var mesTexto by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
     var formularioAbierto by rememberSaveable { mutableStateOf(false) }
     var idEnEdicion by rememberSaveable { mutableStateOf<String?>(null) }
-    val gastoEnEdicion = idEnEdicion?.let { id -> Repositorio.gastos.firstOrNull { it.id == id } }
+    var tipoNuevo by rememberSaveable { mutableStateOf(TipoMovimiento.GASTO.name) }
 
+    val colores = LocalColoresExtra.current
     val mes = remember(mesTexto) { YearMonth.parse(mesTexto) }
     val cambiarMes: (YearMonth) -> Unit = { nuevo -> mesTexto = nuevo.toString() }
+    val movimientoEnEdicion =
+        idEnEdicion?.let { id -> Repositorio.movimientos.firstOrNull { it.id == id } }
+
+    val abrirNuevo: (TipoMovimiento) -> Unit = { tipo ->
+        idEnEdicion = null
+        tipoNuevo = tipo.name
+        formularioAbierto = true
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -83,20 +101,32 @@ fun AppGastos() {
             }
         },
         floatingActionButton = {
-            if (destino == Destino.RESUMEN || destino == Destino.GASTOS) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        idEnEdicion = null
-                        formularioAbierto = true
-                    },
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("Gasto") }
-                )
+            if (destino == Destino.RESUMEN || destino == Destino.HISTORIAL) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    SmallFloatingActionButton(
+                        onClick = { abrirNuevo(TipoMovimiento.INGRESO) },
+                        containerColor = colores.ingresoSuave,
+                        contentColor = colores.ingreso,
+                        modifier = Modifier.semantics {
+                            contentDescription = "Registrar un ingreso"
+                        }
+                    ) {
+                        Text("💰", style = MaterialTheme.typography.titleMedium)
+                    }
+                    ExtendedFloatingActionButton(
+                        onClick = { abrirNuevo(TipoMovimiento.GASTO) },
+                        icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                        text = { Text("Gasto") }
+                    )
+                }
             }
         }
     ) { relleno ->
-        val editar: (Gasto) -> Unit = { gasto ->
-            idEnEdicion = gasto.id
+        val editar: (Movimiento) -> Unit = { movimiento ->
+            idEnEdicion = movimiento.id
             formularioAbierto = true
         }
         val modificador = Modifier.padding(relleno).fillMaxSize()
@@ -105,15 +135,15 @@ fun AppGastos() {
             Destino.RESUMEN -> PantallaResumen(
                 mes = mes,
                 onCambiarMes = cambiarMes,
-                onVerTodos = { destino = Destino.GASTOS },
-                onEditarGasto = editar,
+                onVerTodos = { destino = Destino.HISTORIAL },
+                onEditar = editar,
                 modifier = modificador
             )
 
-            Destino.GASTOS -> PantallaGastos(
+            Destino.HISTORIAL -> PantallaHistorial(
                 mes = mes,
                 onCambiarMes = cambiarMes,
-                onEditarGasto = editar,
+                onEditar = editar,
                 modifier = modificador
             )
 
@@ -127,8 +157,9 @@ fun AppGastos() {
     }
 
     if (formularioAbierto) {
-        FormularioGasto(
-            gasto = gastoEnEdicion,
+        FormularioMovimiento(
+            movimiento = movimientoEnEdicion,
+            tipoInicial = TipoMovimiento.desde(tipoNuevo),
             fechaSugerida = if (mes == YearMonth.now()) LocalDate.now() else mes.atDay(1),
             onCerrar = {
                 formularioAbierto = false

@@ -1,28 +1,39 @@
-# Mis Gastos — app Android para registrar gastos por categoría
+# Mis Gastos — app Android para registrar gastos e ingresos
 
-App nativa (Kotlin + Jetpack Compose) para anotar en qué se te va la plata:
-alimentación, bencina, deudas, arriendo, servicios y las categorías que quieras crear.
+App nativa (Kotlin + Jetpack Compose) para anotar en qué se te va la plata y cuánta entra:
+alimentación, bencina, deudas, arriendo, servicios, sueldo, trabajos extra y las categorías
+que quieras crear.
 
-**Descarga directa del APK:** [augustogames.cl/mis-gastos.apk](https://augustogames.cl/mis-gastos.apk)
+**Versión actual: 1.1** · [Descarga directa del APK](https://augustogames.cl/mis-gastos.apk)
 (o el archivo `mis-gastos.apk` en la raíz de este repositorio).
 
 ## Qué hace
 
+- **Gastos e ingresos**: cada movimiento se registra como gasto o ingreso con un botón
+  al principio del formulario. El botón 💰 del inicio abre directo un ingreso.
 - **Registro rápido**: monto con separador de miles, categoría, fecha (Hoy / Ayer / calendario),
   forma de pago (efectivo, débito, crédito, transferencia) y un detalle opcional.
   Botones de montos rápidos (+1.000, +5.000, …) para no escribir tanto.
-- **Resumen mensual**: total del mes, anillo con la repartición por categoría, comparación con
-  el mes anterior, gasto de hoy y promedio por día.
-- **Presupuestos**: tope mensual por categoría y barra de avance que se pone roja al pasarse.
-- **Historial**: gastos agrupados por día, con buscador y filtro por categoría. Se toca un gasto
-  para editarlo o borrarlo.
-- **Categorías propias**: nombre, emoji, color y tope. Al borrar una, sus gastos pasan a "Otros"
-  para no perder historial.
-- **Exportar a CSV** desde Ajustes (se comparte por WhatsApp, mail, Drive, lo que sea).
+- **Resumen mensual**: anillo con la repartición de los gastos, total de ingresos, cuánto
+  te queda (o cuánto te falta), qué porcentaje de lo que entró llevas gastado, comparación
+  con el mes anterior, gasto de hoy y promedio por día.
+- **Presupuestos y metas**: tope mensual por categoría de gasto, con barra que se pone roja
+  al pasarse; meta mensual por categoría de ingreso, que se pone verde al alcanzarla.
+- **Historial**: movimientos agrupados por día con filtro Todo / Gastos / Ingresos, buscador
+  y filtro por categoría. Se toca uno para editarlo, cambiarlo de tipo o borrarlo.
+- **Categorías propias** separadas por tipo: nombre, emoji, color y tope. Al borrar una, sus
+  movimientos pasan a "Otros" (o a "Otros ingresos") para no perder historial.
+- **Exportar a CSV** desde Ajustes, con una columna que distingue gastos de ingresos.
 - **Tema claro / oscuro / según el sistema** y símbolo de moneda configurable.
 
 Todo se guarda en un archivo JSON dentro del almacenamiento privado de la app:
 **sin permisos, sin cuentas y sin internet**.
+
+### Actualizar desde la 1.0
+
+Se instala encima sin desinstalar nada: los gastos, las categorías y los presupuestos que ya
+tenías se conservan, y se agregan las categorías de ingreso. La migración del formato antiguo
+está cubierta por una prueba automática.
 
 ## Instalar el APK en el teléfono
 
@@ -65,15 +76,38 @@ export KEY_PASSWORD=...
 gastos-app/app/src/main/java/cl/augustogames/gastos/
 ├── MainActivity.kt              punto de entrada
 ├── data/
-│   ├── Modelos.kt               Gasto, Categoría, Ajustes y categorías iniciales
+│   ├── Modelos.kt               Movimiento, Categoría, Ajustes y categorías iniciales
 │   └── Repositorio.kt           estado en memoria + guardado en JSON + consultas
 └── ui/
-    ├── App.kt                   navegación (Resumen · Gastos · Categorías · Ajustes)
+    ├── App.kt                   navegación (Resumen · Historial · Categorías · Ajustes)
     ├── Formato.kt               montos y fechas en español
     ├── theme/Tema.kt            paleta clara y oscura
     ├── componentes/             gráfico de dona, formulario, campos y piezas reutilizables
     └── pantallas/               las cuatro pantallas
 ```
 
-Las pruebas viven en `app/src/test/` y cubren el formateo, el repositorio (totales,
-persistencia, borrado de categorías, CSV) y un arranque real de la app con Robolectric.
+Las pruebas viven en `app/src/test/` y cubren el formateo, el repositorio (balance mensual,
+totales por categoría, persistencia, migración desde el formato 1.0, borrado de categorías,
+CSV) y un arranque real de la app con Robolectric.
+
+## Formato de datos
+
+El archivo `mis-gastos.json` guarda `version: 2`:
+
+```json
+{
+  "version": 2,
+  "ajustes": { "simbolo": "$", "tema": "SISTEMA" },
+  "categorias": [
+    { "id": "sueldo", "nombre": "Sueldo", "emoji": "💼", "color": 4281306715,
+      "presupuesto": 0, "tipo": "INGRESO" }
+  ],
+  "movimientos": [
+    { "id": "…", "monto": 850000, "categoriaId": "sueldo", "fecha": "2026-09-05",
+      "nota": "", "metodo": "TRANSFERENCIA", "tipo": "INGRESO", "creado": 1757500000000 }
+  ]
+}
+```
+
+Los archivos de la versión 1 (lista `gastos`, sin `tipo`) se leen igual y se guardan
+en el formato nuevo al primer cambio.

@@ -1,7 +1,7 @@
 package cl.augustogames.gastos.ui.pantallas
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,12 +34,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -49,23 +51,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cl.augustogames.gastos.data.Categoria
-import cl.augustogames.gastos.data.EMOJIS_SUGERIDOS
-import cl.augustogames.gastos.data.ID_CATEGORIA_OTROS
 import cl.augustogames.gastos.data.PALETA_CATEGORIAS
 import cl.augustogames.gastos.data.Repositorio
+import cl.augustogames.gastos.data.TipoMovimiento
+import cl.augustogames.gastos.data.emojisSugeridos
+import cl.augustogames.gastos.data.idCategoriaComodin
 import cl.augustogames.gastos.ui.Formato
 import cl.augustogames.gastos.ui.componentes.BarraProgreso
 import cl.augustogames.gastos.ui.componentes.BurbujaCategoria
 import cl.augustogames.gastos.ui.componentes.CampoMonto
 import cl.augustogames.gastos.ui.componentes.Tarjeta
+import cl.augustogames.gastos.ui.theme.LocalColoresExtra
 import java.time.YearMonth
 
 @Composable
 fun PantallaCategorias(mes: YearMonth, modifier: Modifier = Modifier) {
-    val simbolo = Repositorio.ajustes.simbolo
-    val gastosMes = Repositorio.gastos.filter { it.mes == mes }
+    var tipoNombre by rememberSaveable { mutableStateOf(TipoMovimiento.GASTO.name) }
     var idEnEdicion by rememberSaveable { mutableStateOf<String?>(null) }
     var creando by rememberSaveable { mutableStateOf(false) }
+
+    val tipo = TipoMovimiento.desde(tipoNombre)
+    val simbolo = Repositorio.ajustes.simbolo
+    val delMes = Repositorio.movimientos.filter { it.mes == mes }
+    val categorias = Repositorio.categorias.filter { it.tipo == tipo }
     val enEdicion = idEnEdicion?.let { id -> Repositorio.categorias.firstOrNull { it.id == id } }
 
     LazyColumn(
@@ -74,8 +82,23 @@ fun PantallaCategorias(mes: YearMonth, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                TipoMovimiento.entries.forEachIndexed { indice, opcion ->
+                    SegmentedButton(
+                        selected = tipo == opcion,
+                        onClick = { tipoNombre = opcion.name },
+                        shape = SegmentedButtonDefaults.itemShape(indice, TipoMovimiento.entries.size),
+                        label = { Text(opcion.plural) }
+                    )
+                }
+            }
+        }
+
+        item {
             Text(
-                "Los presupuestos son mensuales. Deja el tope en cero si esa categoría no lo necesita.",
+                if (tipo == TipoMovimiento.INGRESO)
+                    "La meta mensual es opcional: sirve para ver cuánto llevas de lo que esperas recibir."
+                else "Los presupuestos son mensuales. Deja el tope en cero si esa categoría no lo necesita.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
@@ -89,15 +112,18 @@ fun PantallaCategorias(mes: YearMonth, modifier: Modifier = Modifier) {
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.size(8.dp))
-                Text("Nueva categoría")
+                Text(
+                    if (tipo == TipoMovimiento.INGRESO) "Nueva categoría de ingreso"
+                    else "Nueva categoría de gasto"
+                )
             }
         }
 
-        items(items = Repositorio.categorias.toList(), key = { it.id }) { categoria ->
-            val gastado = gastosMes.filter { it.categoriaId == categoria.id }.sumOf { it.monto }
+        items(items = categorias, key = { it.id }) { categoria ->
+            val acumulado = delMes.filter { it.categoriaId == categoria.id }.sumOf { it.monto }
             TarjetaCategoria(
                 categoria = categoria,
-                gastado = gastado,
+                acumulado = acumulado,
                 simbolo = simbolo,
                 mes = mes,
                 onEditar = { idEnEdicion = categoria.id }
@@ -115,32 +141,31 @@ fun PantallaCategorias(mes: YearMonth, modifier: Modifier = Modifier) {
     }
 
     if (creando) {
-        DialogoCategoria(
-            categoria = null,
-            simbolo = simbolo,
-            onCerrar = { creando = false }
-        )
+        DialogoCategoria(categoria = null, tipo = tipo, simbolo = simbolo) { creando = false }
     }
 
     enEdicion?.let { categoria ->
-        DialogoCategoria(
-            categoria = categoria,
-            simbolo = simbolo,
-            onCerrar = { idEnEdicion = null }
-        )
+        DialogoCategoria(categoria = categoria, tipo = categoria.tipo, simbolo = simbolo) {
+            idEnEdicion = null
+        }
     }
 }
 
 @Composable
 private fun TarjetaCategoria(
     categoria: Categoria,
-    gastado: Long,
+    acumulado: Long,
     simbolo: String,
     mes: YearMonth,
     onEditar: () -> Unit
 ) {
+    val colores = LocalColoresExtra.current
+    val esIngreso = categoria.tipo == TipoMovimiento.INGRESO
     val color = Color(categoria.color)
-    val excedido = categoria.presupuesto > 0 && gastado > categoria.presupuesto
+    val tope = categoria.presupuesto
+    val excedido = !esIngreso && tope > 0 && acumulado > tope
+    val metaLograda = esIngreso && tope > 0 && acumulado >= tope
+
     Tarjeta {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -155,23 +180,30 @@ private fun TarjetaCategoria(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    if (categoria.presupuesto > 0)
-                        "${Formato.monto(gastado, simbolo)} de ${Formato.monto(categoria.presupuesto, simbolo)}"
-                    else "${Formato.monto(gastado, simbolo)} en ${Formato.mesAnio(mes).lowercase()}",
+                    if (tope > 0)
+                        "${Formato.monto(acumulado, simbolo)} de ${Formato.monto(tope, simbolo)}"
+                    else "${Formato.monto(acumulado, simbolo)} en ${Formato.mesAnio(mes).lowercase()}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (excedido) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = when {
+                        excedido -> MaterialTheme.colorScheme.error
+                        metaLograda -> colores.ingreso
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
             }
             IconButton(onClick = onEditar) {
                 Icon(Icons.Default.Edit, contentDescription = "Editar ${categoria.nombre}")
             }
         }
-        if (categoria.presupuesto > 0) {
+        if (tope > 0) {
             Spacer(Modifier.height(10.dp))
             BarraProgreso(
-                progreso = gastado.toFloat() / categoria.presupuesto,
-                color = if (excedido) MaterialTheme.colorScheme.error else color
+                progreso = acumulado.toFloat() / tope,
+                color = when {
+                    excedido -> MaterialTheme.colorScheme.error
+                    esIngreso -> colores.ingreso
+                    else -> color
+                }
             )
         }
     }
@@ -181,22 +213,31 @@ private fun TarjetaCategoria(
 @Composable
 private fun DialogoCategoria(
     categoria: Categoria?,
+    tipo: TipoMovimiento,
     simbolo: String,
     onCerrar: () -> Unit
 ) {
-    var nombre by remember { mutableStateOf(categoria?.nombre.orEmpty()) }
-    var emoji by remember { mutableStateOf(categoria?.emoji ?: EMOJIS_SUGERIDOS.first()) }
-    var color by remember { mutableStateOf(categoria?.color ?: PALETA_CATEGORIAS.first()) }
-    var presupuesto by remember {
+    val emojis = emojisSugeridos(tipo)
+    var nombre by rememberSaveable { mutableStateOf(categoria?.nombre.orEmpty()) }
+    var emoji by rememberSaveable { mutableStateOf(categoria?.emoji ?: emojis.first()) }
+    var color by rememberSaveable { mutableStateOf(categoria?.color ?: PALETA_CATEGORIAS.first()) }
+    var tope by rememberSaveable {
         mutableStateOf(categoria?.presupuesto?.takeIf { it > 0 }?.toString() ?: "")
     }
-    var confirmarBorrado by remember { mutableStateOf(false) }
-    val esBorrable = categoria != null && categoria.id != ID_CATEGORIA_OTROS
-    val enUso = categoria != null && Repositorio.gastos.any { it.categoriaId == categoria.id }
+    var confirmarBorrado by rememberSaveable { mutableStateOf(false) }
+
+    val comodin = idCategoriaComodin(tipo)
+    val esBorrable = categoria != null && categoria.id != comodin
+    val enUso = categoria != null && Repositorio.movimientos.any { it.categoriaId == categoria.id }
 
     AlertDialog(
         onDismissRequest = onCerrar,
-        title = { Text(if (categoria == null) "Nueva categoría" else "Editar categoría") },
+        title = {
+            Text(
+                if (categoria == null) "Nueva categoría de ${tipo.etiqueta.lowercase()}"
+                else "Editar categoría"
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -206,16 +247,19 @@ private fun DialogoCategoria(
                     value = nombre,
                     onValueChange = { nombre = it.take(28) },
                     label = { Text("Nombre") },
-                    placeholder = { Text("Ej: Bencina") },
+                    placeholder = {
+                        Text(if (tipo == TipoMovimiento.INGRESO) "Ej: Sueldo" else "Ej: Bencina")
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 CampoMonto(
-                    texto = presupuesto,
-                    onCambio = { presupuesto = it },
+                    texto = tope,
+                    onCambio = { tope = it },
                     simbolo = simbolo,
-                    etiqueta = "Tope mensual (opcional)",
+                    etiqueta = if (tipo == TipoMovimiento.INGRESO) "Meta mensual (opcional)"
+                    else "Tope mensual (opcional)",
                     marcador = "0",
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -233,7 +277,7 @@ private fun DialogoCategoria(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    EMOJIS_SUGERIDOS.forEach { opcion ->
+                    emojis.forEach { opcion ->
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
@@ -298,12 +342,13 @@ private fun DialogoCategoria(
                         nombre = nombre.trim(),
                         emoji = emoji.ifBlank { "📦" },
                         color = color,
-                        presupuesto = presupuesto.toLongOrNull() ?: 0L
+                        presupuesto = tope.toLongOrNull() ?: 0L
                     ) ?: Categoria(
                         nombre = nombre.trim(),
                         emoji = emoji.ifBlank { "📦" },
                         color = color,
-                        presupuesto = presupuesto.toLongOrNull() ?: 0L
+                        presupuesto = tope.toLongOrNull() ?: 0L,
+                        tipo = tipo
                     )
                     Repositorio.guardarCategoria(guardada)
                     onCerrar()
@@ -315,13 +360,14 @@ private fun DialogoCategoria(
     )
 
     if (confirmarBorrado && categoria != null) {
+        val nombreComodin = Repositorio.categoria(comodin)?.nombre ?: "Otros"
         AlertDialog(
             onDismissRequest = { confirmarBorrado = false },
             title = { Text("¿Eliminar «${categoria.nombre}»?") },
             text = {
                 Text(
-                    if (enUso) "Los gastos que tenía quedarán en la categoría «Otros»."
-                    else "No tiene gastos registrados, se puede borrar sin problema."
+                    if (enUso) "Los movimientos que tenía quedarán en «$nombreComodin»."
+                    else "No tiene movimientos registrados, se puede borrar sin problema."
                 )
             },
             confirmButton = {

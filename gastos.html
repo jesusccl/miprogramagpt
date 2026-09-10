@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Mis Gastos — App para registrar tus gastos</title>
-<meta name="description" content="App Android gratuita para anotar tus gastos por categoría: alimentación, bencina, deudas y las que quieras. Sin cuentas ni internet."/>
+<title>Mis Gastos — App para registrar gastos e ingresos</title>
+<meta name="description" content="App Android gratuita para anotar tus gastos e ingresos por categoría: alimentación, bencina, deudas, sueldo y las que quieras. Sin cuentas ni internet."/>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Exo+2:wght@700;800;900&display=swap" rel="stylesheet"/>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -112,16 +112,23 @@
     <div class="icono">👛</div>
     <div>
       <h1>Mis Gastos</h1>
-      <p class="bajada">Anota en qué se te va la plata, mes a mes y por categoría.</p>
+      <p class="bajada">Anota lo que entra y lo que sale, mes a mes y por categoría.</p>
     </div>
   </header>
 
   <div class="descarga">
     <a class="boton" href="/mis-gastos.apk" download>⬇ Descargar APK</a>
     <div>
-      <div><strong>Android 8.0 o superior</strong></div>
-      <div class="peso">1,1 MB · gratis · sin publicidad</div>
+      <div><strong>Versión 1.1</strong> · Android 8.0 o superior</div>
+      <div class="peso">1,2 MB · gratis · sin publicidad</div>
     </div>
+  </div>
+
+  <div class="nota" style="border-left-color:#7d5cff;background:rgba(125,92,255,0.10);margin-bottom:20px">
+    <strong style="color:var(--text)">Nuevo en la 1.1:</strong> ahora también registras tus
+    <strong style="color:var(--text)">ingresos</strong> (sueldo, trabajos extra, ventas…) y la app
+    te muestra el balance del mes: cuánto entró, cuánto salió y cuánto te queda.
+    Si ya tienes la 1.0, se instala encima y no pierdes nada.
   </div>
 
   <h2>Qué trae</h2>
@@ -132,24 +139,29 @@
       <p>Monto, categoría y listo. Botones de montos rápidos y atajos de Hoy / Ayer para no perder tiempo.</p>
     </div>
     <div class="carta">
+      <span class="emoji">⚖️</span>
+      <h3>Balance del mes</h3>
+      <p>Cuánto entró, cuánto salió y cuánto te queda. Te avisa si estás gastando más de lo que recibes.</p>
+    </div>
+    <div class="carta">
       <span class="emoji">🍩</span>
-      <h3>Resumen del mes</h3>
-      <p>Total gastado, anillo con la repartición por categoría y comparación con el mes anterior.</p>
+      <h3>Resumen por categoría</h3>
+      <p>Anillo con la repartición de los gastos, de dónde vino la plata y comparación con el mes anterior.</p>
     </div>
     <div class="carta">
       <span class="emoji">🎯</span>
-      <h3>Presupuestos</h3>
-      <p>Pon un tope mensual por categoría. La barra se pone roja apenas te pasas.</p>
+      <h3>Presupuestos y metas</h3>
+      <p>Tope mensual por categoría de gasto y meta mensual por categoría de ingreso, con barra de avance.</p>
     </div>
     <div class="carta">
       <span class="emoji">🔎</span>
       <h3>Historial</h3>
-      <p>Gastos agrupados por día, con buscador y filtro por categoría. Se editan con un toque.</p>
+      <p>Movimientos agrupados por día, con filtro Todo / Gastos / Ingresos, buscador y categorías.</p>
     </div>
     <div class="carta">
       <span class="emoji">📤</span>
       <h3>Exportar a CSV</h3>
-      <p>Manda tus gastos a Excel, Sheets o por WhatsApp cuando quieras.</p>
+      <p>Manda todo a Excel, Sheets o por WhatsApp cuando quieras, con gastos e ingresos separados.</p>
     </div>
     <div class="carta">
       <span class="emoji">🔒</span>
@@ -159,6 +171,7 @@
   </div>
 
   <h2>Categorías que vienen listas</h2>
+  <p class="peso" style="margin-bottom:8px">Para los gastos:</p>
   <div class="categorias">
     <span class="chip">🍽️ Alimentación</span>
     <span class="chip">⛽ Bencina</span>
@@ -173,7 +186,17 @@
     <span class="chip">🐾 Mascotas</span>
     <span class="chip">📦 Otros</span>
   </div>
-  <p class="nota">Puedes crear las tuyas con el emoji, el color y el tope mensual que quieras.</p>
+  <p class="peso" style="margin:16px 0 8px">Y para los ingresos:</p>
+  <div class="categorias">
+    <span class="chip">💼 Sueldo</span>
+    <span class="chip">🧰 Trabajos extra</span>
+    <span class="chip">🏷️ Ventas</span>
+    <span class="chip">📈 Inversiones</span>
+    <span class="chip">🎁 Regalos</span>
+    <span class="chip">↩️ Devoluciones</span>
+    <span class="chip">➕ Otros ingresos</span>
+  </div>
+  <p class="nota">Puedes crear las tuyas con el emoji, el color y el tope o meta mensual que quieras.</p>
 
   <h2>Cómo instalarla</h2>
   <ol class="pasos">
