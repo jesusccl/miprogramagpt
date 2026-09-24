@@ -494,6 +494,22 @@ def tex_leaves():
     render(sc, 'leaves.jpg', 512, 512)
 
 
+def tex_arpillera():
+    """Arpillera lisa (para el saco modelado en 3D, sin cara pintada)."""
+    sc = reset_scene()
+    b = NB('arpillera')
+    wu = b.math('SINE', b.mul(b.u, TAU * 44))
+    wv = b.math('SINE', b.mul(b.v, TAU * 44))
+    jit = b.noise(b.torus(seed=121), 12, 4)
+    weave = b.add(b.mul(b.math('ABSOLUTE', b.mul(wu, wv)), 0.6), b.mul(jit, 0.4))
+    col = b.ramp(weave, [(0.1, '#5f4f32'), (0.45, '#9a8558'), (0.8, '#c2ad7c')])
+    stain = b.noise(b.torus(seed=122), 2.5, 5)
+    col = b.mix(b.mul(b.smooth(0.55, 0.75, stain), 0.45), col, '#4b3c24')
+    b.emit(col)
+    plane(b.mat)
+    render(sc, 'arpillera.jpg', 512, 512)
+
+
 def tex_burlap():
     """Saco de arpillera con la cara cosida (la cara queda en u≈0.25 de la esfera)."""
     sc = reset_scene()
@@ -637,7 +653,7 @@ def contact_sheet(names):
 def main():
     os.makedirs(OUT, exist_ok=True)
     jobs = [tex_field, tex_ground, tex_forest, tex_rock, tex_stone, tex_bark, tex_wood, tex_straw,
-            tex_cloth, tex_coat, tex_fur, tex_leaves, tex_burlap, tex_cape, tex_rune]
+            tex_cloth, tex_coat, tex_fur, tex_leaves, tex_arpillera, tex_burlap, tex_cape, tex_rune]
     # permite regenerar solo algunas:  ... texturas_campos_dorados.py -- leaves cape
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:]
     wanted = {a for a in args if not a.startswith('-')}
@@ -647,7 +663,7 @@ def main():
         print(job.__doc__.strip().splitlines()[0])
         job()
     contact_sheet(['field.jpg', 'ground.jpg', 'forest.jpg', 'rock.jpg', 'stone.jpg', 'bark.jpg', 'wood.jpg', 'straw.jpg',
-                   'cloth.jpg', 'coat.jpg', 'fur.jpg', 'leaves.jpg', 'burlap.jpg', 'cape.png', 'rune.png'])
+                   'cloth.jpg', 'coat.jpg', 'fur.jpg', 'leaves.jpg', 'arpillera.jpg', 'burlap.jpg', 'cape.png', 'rune.png'])
 
 
 if __name__ == '__main__':

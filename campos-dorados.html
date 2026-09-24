@@ -179,6 +179,7 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;outline:non
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 (function(){
 'use strict';
@@ -628,11 +629,12 @@ function litMaterial(hex, opts){
   const gain = map ? (opts.mode === 'albedo' ? 1 : texGain(map)) : 1;
   return new THREE.ShaderMaterial({
     defines: map ? {USE_TMAP: ''} : {},
-    uniforms: {uColor:{value: LC(hex)}, uSway:{value: opts.sway||0}, uTime:U.uTime, uSunDir:U.uSunDir, uSunCol:U.uSunCol, uSkyCol:U.uSkyCol,
+    vertexColors: !!opts.vc,
+    uniforms: {uColor:{value: LC(hex)}, uSway:{value: opts.sway||0}, uSwayY0:{value: opts.swayY0 !== undefined ? opts.swayY0 : -0.6}, uSwayK:{value: opts.swayK || 1}, uTime:U.uTime, uSunDir:U.uSunDir, uSunCol:U.uSunCol, uSkyCol:U.uSkyCol,
       uGndCol:U.uGndCol, uFogCol:U.uFogCol, uScatterCol:U.uScatterCol, uFogDensity:U.uFogDensity,
       uMap: {value: map}, uMapScale: {value: opts.mapScale || 0.5}, uMapGain: {value: gain}},
     vertexShader: `
-      uniform float uTime, uSway;
+      uniform float uTime, uSway, uSwayY0, uSwayK;
       varying vec3 vN; varying vec3 vW; varying vec3 vC;
       void main(){
         mat4 m = modelMatrix;
@@ -641,7 +643,7 @@ function litMaterial(hex, opts){
         #endif
         vec4 w = m * vec4(position, 1.0);
         if (uSway > 0.0) {
-          float k = max(position.y + 0.6, 0.0);
+          float k = max(position.y - uSwayY0, 0.0) * uSwayK;
           w.x += sin(uTime*1.3 + w.x*0.21 + w.z*0.13) * uSway * k;
           w.z += cos(uTime*1.1 + w.x*0.17) * uSway * 0.6 * k;
         }
@@ -649,6 +651,9 @@ function litMaterial(hex, opts){
         vC = vec3(1.0);
         #ifdef USE_INSTANCING_COLOR
           vC = instanceColor;
+        #endif
+        #ifdef USE_COLOR
+          vC *= color.rgb;
         #endif
         vW = w.xyz;
         gl_Position = projectionMatrix * viewMatrix * w;
@@ -679,6 +684,7 @@ function litMaterial(hex, opts){
 }
 
 function buildVegetation(){
+  if (MODEL.arboles && MODEL.rocas && modelGeo('arboles', 'pino_copa')) { buildVegetationModels(); return; }
   const dummy = new THREE.Object3D();
   // bosque
   const F = worldObjs.forest;
@@ -737,6 +743,50 @@ function buildVegetation(){
   });
   rocks.frustumCulled = false; rocks.instanceMatrix.needsUpdate = true; rocks.instanceColor.needsUpdate = true;
   scene.add(rocks);
+}
+
+function buildVegetationModels(){
+  const dummy = new THREE.Object3D(), c = new THREE.Color();
+  const barkMat = () => TEX.bark ? litMaterial(0xffffff, {map: TEX.bark, mode: 'albedo', mapScale: 0.9, vc: true}) : litMaterial(0x4a3a2a, {vc: true});
+  const leafMat = (sway) => litMaterial(0xffffff, {sway, swayY0: 1.5, swayK: 0.22, map: TEX.leaves, mapScale: 0.35, vc: true});
+  const greens = [0x3c4a26, 0x4a552e, 0x56602f, 0x34401f, 0x646634, 0x445229].map(LC);
+  const autumn = [0x8f3b25, 0xa2542c, 0xb58a2c, 0x9a2f26].map(LC);
+  const reds = [0xb3222b, 0xc8323a, 0x9b1c26, 0xd0443c, 0xa82a2f, 0xc02838].map(LC);
+  const place = (list, kind, mats, colorFn) => {
+    const tr = new THREE.InstancedMesh(modelGeo('arboles', kind + '_tronco'), mats[0], list.length);
+    const cp = new THREE.InstancedMesh(modelGeo('arboles', kind + '_copa'), mats[1], list.length);
+    list.forEach((t, i) => {
+      dummy.position.set(t.x, t.y, t.z); dummy.rotation.set(t.tx || 0, t.rot, t.tz || 0); dummy.scale.set(t.sx, t.sy, t.sx); dummy.updateMatrix();
+      tr.setMatrixAt(i, dummy.matrix); cp.setMatrixAt(i, dummy.matrix);
+      cp.setColorAt(i, colorFn(t));
+    });
+    for (const m of [tr, cp]) { m.frustumCulled = false; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; scene.add(m); }
+  };
+  // bosque: pinos y robles
+  const pinos = [], robles = [];
+  for (const t of worldObjs.forest) {
+    const s = t.s*0.85, o = {x: t.x, y: t.y, z: t.z, rot: R()*6.28, sx: s, sy: s*rr(0.9, 1.15)};
+    (R() < 0.55 ? pinos : robles).push(o);
+  }
+  const forestColor = () => c.copy(R() < 0.07 ? pick(autumn) : pick(greens)).multiplyScalar(rr(0.85, 1.12));
+  place(pinos, 'pino', [barkMat(), leafMat(0.04)], forestColor);
+  place(robles, 'roble', [barkMat(), leafMat(0.05)], forestColor);
+  // árboles rojos de la pradera
+  place(redTrees.map(t => { const s = t.s/1.9; return {x: t.x, y: t.y, z: t.z, rot: t.rot, sx: s, sy: s*rr(0.92, 1.1), tx: 0.04*rr(-1, 1), tz: 0.04*rr(-1, 1)}; }),
+    'rojo', [barkMat(), leafMat(0.06)], () => c.copy(pick(reds)).multiplyScalar(rr(0.85, 1.15)));
+  // rocas: tres variantes
+  const rockMat = TEX.rock ? litMaterial(0xffffff, {map: TEX.rock, mode: 'albedo', mapScale: 0.45, vc: true}) : litMaterial(0x8a857a, {vc: true});
+  for (let v=0; v<3; v++) {
+    const list = worldObjs.rocks.filter((r, i) => i % 3 === v);
+    const m = new THREE.InstancedMesh(modelGeo('rocas', 'roca_' + (v+1)), rockMat, list.length);
+    list.forEach((r, i) => {
+      dummy.position.set(r.x, r.y + r.s*0.08, r.z); dummy.rotation.set(r.rx*0.04, r.ry, r.rx*0.03); dummy.scale.set(r.s, r.s*r.sy*1.1, r.s*rr(0.8, 1.2)); dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+      m.setColorAt(i, c.setRGB(1, 1, 1).multiplyScalar(rr(0.8, 1.1)));
+    });
+    m.frustumCulled = false; m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true;
+    scene.add(m);
+  }
 }
 
 // ================== PASTO ==================
@@ -903,7 +953,7 @@ const TEX = {};
 const TEX_BASE = 'assets/campos-dorados/';
 const TEX_FILES = {field: 'field.jpg', ground: 'ground.jpg', forest: 'forest.jpg', rock: 'rock.jpg', stone: 'stone.jpg', bark: 'bark.jpg',
   wood: 'wood.jpg', straw: 'straw.jpg', cloth: 'cloth.jpg', coat: 'coat.jpg', fur: 'fur.jpg', leaves: 'leaves.jpg', burlap: 'burlap.jpg',
-  cape: 'cape.png', rune: 'rune.png'};
+  arpillera: 'arpillera.jpg', cape: 'cape.png', rune: 'rune.png'};
 function loadTextures(onProgress){
   // desde file:// el navegador bloquea subir imágenes a WebGL: se usan las texturas de respaldo
   if (location.protocol === 'file:') return Promise.resolve(0);
@@ -952,6 +1002,116 @@ function lamA(t, rx, ry, extra, fallbackHex){
   if (!t) return lam(fallbackHex, extra);
   return new THREE.MeshLambertMaterial(Object.assign({map: rep(t, rx, ry)}, extra || {}));
 }
+// ================== MODELOS 3D (Blender) ==================
+// Generados con tools/blender/modelos_campos_dorados.py. Cada material del .glb se
+// sustituye por uno propio con las texturas de Blender proyectadas en el espacio del modelo.
+const MODEL = {};
+const MODEL_BASE = 'assets/campos-dorados/modelos/';
+const MODEL_FILES = ['augusto', 'lobo', 'espantapajaros', 'santuario', 'arboles', 'rocas'];
+function loadModels(onProgress){
+  if (location.protocol === 'file:' || !THREE.GLTFLoader) return Promise.resolve(0);
+  const loader = new THREE.GLTFLoader();
+  let done = 0;
+  return Promise.all(MODEL_FILES.map(n => new Promise(res => {
+    loader.load(MODEL_BASE + n + '.glb', g => { MODEL[n] = g.scene; onProgress(++done/MODEL_FILES.length); res(1); }, undefined, () => res(0));
+  }))).then(r => r.reduce((a, b) => a + b, 0));
+}
+// c: color, tex: textura, alb: la textura aporta el color, s: repeticiones por metro, ds: doble cara, spec: brillo, fb: color si falta la textura
+const CHAR_DEF = {
+  piel: {c: 0xd8a67c, spec: 0.12}, pelo: {c: 0x2a1f18, tex: 'cloth', s: 9}, ojo: {c: 0x120c0a, spec: 0.9},
+  tunica: {c: 0x5b5a42, tex: 'cloth', s: 3, ds: 1}, pantalon: {c: 0x3a3026, tex: 'cloth', s: 3},
+  cuero: {c: 0x4a3322, tex: 'cloth', s: 5, spec: 0.2}, venda: {c: 0xc9b99a, tex: 'cloth', s: 5},
+  rojo: {c: 0xa3232d, tex: 'cloth', s: 3, ds: 1}, rojo_osc: {c: 0x7c1620, tex: 'cloth', s: 4, ds: 1},
+  paja: {tex: 'straw', alb: 1, s: 5, ds: 1, fb: 0xd6b262}, banda: {c: 0x2d3f73, tex: 'cloth', s: 6},
+  acero: {c: 0xd9dee4, spec: 1.2}, oro: {c: 0xc9a03a, spec: 0.8}, vaina: {c: 0x3a2a20, tex: 'wood', s: 3, spec: 0.3},
+  pelaje: {c: 0x6c6660, tex: 'fur', s: 3}, pelaje_osc: {c: 0x3a3632, tex: 'fur', s: 3}, pelaje_claro: {c: 0x9a9186, tex: 'fur', s: 3},
+  nariz: {c: 0x141212, spec: 0.5}, diente: {c: 0xe8e0cc, spec: 0.3},
+  madera: {tex: 'wood', alb: 1, s: 2.5, fb: 0x6b4a2b}, abrigo: {tex: 'coat', alb: 1, s: 1.6, ds: 1, fb: 0x4b4a30},
+  paja_suelta: {tex: 'field', alb: 1, s: 3, fb: 0xcfa651}, cuerda: {c: 0x7a5a36, tex: 'cloth', s: 7},
+  arpillera: {tex: 'arpillera', alb: 1, s: 2.5, ds: 1, fb: 0xa99366}, sombrero: {c: 0x2e2a24, tex: 'cloth', s: 3, ds: 1},
+  metal: {c: 0x9da3a6, spec: 0.9}, hilo: {c: 0x241709}, espina: {tex: 'bark', alb: 1, s: 3, fb: 0x3b2a1c},
+  piedra: {tex: 'stone', alb: 1, s: 0.55, fb: 0x958e7e}, piedra_osc: {c: 0xa29b8b, tex: 'stone', s: 0.8},
+  roca: {tex: 'rock', alb: 1, s: 0.6, fb: 0x8a857a}, musgo: {tex: 'forest', alb: 1, s: 1, fb: 0x5d6a32},
+};
+const CHAR_VS = `
+varying vec3 vN; varying vec3 vW; varying vec3 vL; varying vec3 vLN; varying float vAO;
+void main(){
+  vL = position; vLN = normal;
+  vec4 w = modelMatrix * vec4(position, 1.0);
+  vN = normalize(mat3(modelMatrix) * normal);
+  vAO = 1.0;
+  #ifdef USE_COLOR
+    vAO = color.r;
+  #endif
+  vW = w.xyz;
+  gl_Position = projectionMatrix * viewMatrix * w;
+}`;
+const CHAR_FS = `
+uniform vec3 uColor, uFlash, uSunCol, uSkyCol, uGndCol; uniform float uSpec, uMapScale, uMapGain; uniform sampler2D uMap;
+varying vec3 vN; varying vec3 vW; varying vec3 vL; varying vec3 vLN; varying float vAO;
+${GLSL_FOG}
+vec3 tl(vec2 uv){ return pow(texture2D(uMap, uv).rgb, vec3(2.2)); }
+void main(){
+  vec3 N = normalize(vN);
+  if (!gl_FrontFacing) N = -N;
+  vec3 alb = uColor;
+  #ifdef USE_TMAP
+    vec3 bw = pow(abs(normalize(vLN)), vec3(4.0)); bw /= (bw.x + bw.y + bw.z);
+    vec3 p = vL * uMapScale;
+    alb *= (tl(p.zy)*bw.x + tl(p.xz)*bw.y + tl(p.xy)*bw.z) * uMapGain;
+  #endif
+  vec3 V = normalize(cameraPosition - vW);
+  float nl = dot(N, uSunDir);
+  vec3 hemi = mix(uGndCol, uSkyCol, N.y*0.5 + 0.5);
+  float spec = pow(max(dot(N, normalize(uSunDir + V)), 0.0), 48.0) * uSpec * step(0.0, nl);
+  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+  vec3 col = alb*(uSunCol*max(nl, 0.0)*mix(0.55, 1.0, vAO) + hemi*vAO*1.05) + uSunCol*spec*vAO + hemi*rim*0.22*vAO + uFlash;
+  gl_FragColor = vec4(applyFog(col, vW), 1.0);
+  #include <tonemapping_fragment>
+  #include <encodings_fragment>
+}`;
+function charMaterial(name, vc, tint){
+  const d = CHAR_DEF[name] || {c: 0xff00ff};
+  const map = d.tex && TEX[d.tex] ? TEX[d.tex] : null;
+  const col = map && d.alb ? new THREE.Color(1, 1, 1) : LC(d.c !== undefined ? d.c : (d.fb || 0xffffff));
+  if (tint) col.multiply(tint);
+  const m = new THREE.ShaderMaterial({
+    defines: map ? {USE_TMAP: ''} : {},
+    uniforms: {uColor: {value: col}, uFlash: {value: new THREE.Color(0, 0, 0)}, uSpec: {value: d.spec || 0},
+      uMap: {value: map}, uMapScale: {value: d.s || 1}, uMapGain: {value: map && !d.alb ? texGain(map) : 1},
+      uSunDir:U.uSunDir, uSunCol:U.uSunCol, uSkyCol:U.uSkyCol, uGndCol:U.uGndCol, uFogCol:U.uFogCol, uScatterCol:U.uScatterCol, uFogDensity:U.uFogDensity},
+    vertexShader: CHAR_VS, fragmentShader: CHAR_FS, side: d.ds ? THREE.DoubleSide : THREE.FrontSide, vertexColors: !!vc,
+  });
+  m.emissive = m.uniforms.uFlash.value;   // la lógica de golpes usa material.emissive
+  m.name = name;
+  return m;
+}
+// Copia un modelo cargado y le asigna materiales (una copia por personaje para poder hacerlo parpadear)
+function instantiateModel(name, opts){
+  opts = opts || {};
+  const root = MODEL[name].clone(true);
+  const cache = opts.shared || {};
+  const get = (n, vc) => {
+    const k = n + (vc ? '+c' : '');
+    if (!cache[k]) cache[k] = n === 'brillo' ? new THREE.MeshBasicMaterial({color: new THREE.Color(1.6, 0.8, 0.2)}) : charMaterial(n, vc, opts.tint && opts.tint[n]);
+    return cache[k];
+  };
+  root.traverse(o => { if (o.isMesh) o.material = get(o.material.name, !!o.geometry.attributes.color); });
+  return {root, get: n => cache[n + '+c'] || cache[n], mats: Object.values(cache)};
+}
+// geometría de una pieza del .glb con su transformación aplicada (para instanciar)
+function modelGeo(name, objName){
+  const sc = MODEL[name];
+  if (!sc) return null;
+  sc.updateMatrixWorld(true);
+  let found = null;
+  sc.traverse(o => { if (!found && o.isMesh && (o.name === objName || (o.parent && o.parent.name === objName))) found = o; });
+  if (!found) return null;
+  const g = found.geometry.clone();
+  g.applyMatrix4(found.matrixWorld);
+  return g;
+}
+
 function buildTextures(){
   // respaldo en canvas solo para lo que no llegó desde assets/
   if (!TEX.straw) TEX.straw = canvasTex(128, 128, (g, w, h) => {
@@ -1039,13 +1199,42 @@ const player = {
 };
 
 function buildPlayer(){
+  const capeMat = new THREE.MeshLambertMaterial({map: TEX.cape, side: THREE.DoubleSide, alphaTest: 0.5});
+  if (MODEL.augusto) buildPlayerModel(); else buildPlayerPrims();
+  const J = player.J;
+  // capa larga (tela animada)
+  const capeG = new THREE.PlaneGeometry(0.8, 1.08, 8, 12); capeG.translate(0, -0.54, 0);
+  { const a = capeG.attributes.position.array; for (let i=0; i<a.length; i+=3) { const tt = -a[i+1]/1.08; a[i] *= 0.62 + 0.5*Math.sqrt(tt); } }
+  const cape = new THREE.Mesh(capeG, capeMat);
+  cape.position.set(0, 0.0, -0.19); cape.rotation.y = Math.PI;
+  J.chest.add(cape);
+  player.capeRest = Float32Array.from(capeG.attributes.position.array);
+  player.cape = cape;
+  player.M.cape = capeMat;
+  player.root.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
+  scene.add(player.root);
+  player.pose = {shRx: 0, shRy: 0, shRz: 0, elR: 0, sword: 1.3, shLx: 0, shLz: 0, elL: 0, chestY: 0, chestX: 0, hipsX: 0, hipsY: 0.95, hipsRX: 0,
+    legL: 0, legR: 0, kneeL: 0, kneeR: 0, neckX: 0};
+}
+
+function buildPlayerModel(){
+  const inst = instantiateModel('augusto');
+  const root = new THREE.Group(); root.add(inst.root);
+  const J = {};
+  for (const n of ['hips', 'chest', 'neck', 'shR', 'elR', 'handR', 'shL', 'elL', 'sword', 'swordBase', 'swordTip', 'hipL', 'kneeL', 'hipR', 'kneeR']) J[n] = inst.root.getObjectByName(n);
+  J.shR.rotation.order = 'YXZ'; J.shL.rotation.order = 'YXZ';
+  player.root = root; player.model = inst.root; player.J = J;
+  player.M = {tunic: inst.get('tunica'), red: inst.get('rojo')};
+}
+
+// respaldo con primitivas (si los modelos .glb no cargan)
+function buildPlayerPrims(){
   const C = TEX.cloth;
   const M = {
-    skin: lam(0xd8a67c), tunic: lamT(0x4a5470, C, 2, 2), pants: lamT(0x2b3048, C, 2, 2), boot: lamT(0x4a3322, C, 1, 1), belt: lamT(0x5b3a22, C, 2, 1),
+    skin: lam(0xd8a67c), tunic: lamT(0x5b5a42, C, 2, 2), pants: lamT(0x3a3026, C, 2, 2), boot: lamT(0x4a3322, C, 1, 1), belt: lamT(0x5b3a22, C, 2, 1),
     red: lamT(0xa3232d, C, 4, 2, {side: THREE.DoubleSide}), redDark: lamT(0x7c1620, C, 3, 1), hair: lam(0x2a1f18),
     straw: lamA(TEX.straw, 12, 1, {side: THREE.DoubleSide}, 0xd6b262), strawCrown: lamA(TEX.straw, 6, 1, {}, 0xd6b262), band: lamT(0x3658a8, C, 4, 1),
     steel: new THREE.MeshPhongMaterial({color: LC(0xd9dee4), shininess: 90, specular: LC(0x999999)}), wrap: lam(0x2a2320), gold: lam(0xc9a03a),
-    cape: new THREE.MeshLambertMaterial({map: TEX.cape, side: THREE.DoubleSide, alphaTest: 0.5}),
   };
   const root = new THREE.Group(), model = new THREE.Group(); root.add(model);
   const J = {};
@@ -1059,11 +1248,7 @@ function buildPlayer(){
   const hair = mesh(geoSph(0.128, 12, 10), M.hair, J.neck, 0, 0.175, -0.025); hair.scale.set(1, 0.85, 1);
   for (const s of [1, -1]) mesh(geoSph(0.016, 6, 5), M.hair, J.neck, 0.045*s, 0.165, 0.112);
   const hat = new THREE.Group(); hat.position.set(0, 0.25, 0); hat.rotation.x = -0.1; J.neck.add(hat);
-  const brimG = new THREE.CylinderGeometry(0.17, 0.52, 0.1, 30, 1, true);
-  mesh(brimG, M.straw, hat, 0, -0.02, 0);
-  mesh(geoCyl(0.14, 0.18, 0.13, 20), M.strawCrown, hat, 0, 0.08, 0);
-  mesh(geoCyl(0.182, 0.182, 0.045, 20), M.band, hat, 0, 0.04, 0);
-  mesh(geoCyl(0.02, 0.14, 0.03, 20), M.band, hat, 0, 0.16, 0);
+  mesh(new THREE.ConeGeometry(0.5, 0.3, 30, 1, true), M.straw, hat, 0, 0.07, 0);
   // capa corta sobre hombros y bufanda
   mesh(new THREE.CylinderGeometry(0.16, 0.37, 0.32, 18, 1, true), M.red, J.chest, 0, -0.06, 0);
   const scarf = mesh(new THREE.TorusGeometry(0.115, 0.05, 8, 18), M.redDark, J.chest, 0, 0.07, 0); scarf.rotation.x = Math.PI/2;
@@ -1097,19 +1282,7 @@ function buildPlayer(){
   };
   const lL = leg(1), lR = leg(-1);
   J.hipL = lL.hip; J.kneeL = lL.knee; J.hipR = lR.hip; J.kneeR = lR.knee;
-  // capa larga (tela animada)
-  const capeG = new THREE.PlaneGeometry(0.8, 1.08, 8, 12); capeG.translate(0, -0.54, 0);
-  { const a = capeG.attributes.position.array; for (let i=0; i<a.length; i+=3) { const tt = -a[i+1]/1.08; a[i] *= 0.62 + 0.5*Math.sqrt(tt); } }
-  const cape = new THREE.Mesh(capeG, M.cape);
-  cape.position.set(0, 0.0, -0.19); cape.rotation.y = Math.PI;
-  J.chest.add(cape);
-  player.capeRest = Float32Array.from(capeG.attributes.position.array);
-  player.cape = cape;
   player.root = root; player.model = model; player.J = J; player.M = M;
-  root.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
-  scene.add(root);
-  player.pose = {shRx: 0, shRy: 0, shRz: 0, elR: 0, sword: 1.3, shLx: 0, shLz: 0, elL: 0, chestY: 0, chestX: 0, hipsX: 0, hipsY: 0.95, hipsRX: 0,
-    legL: 0, legR: 0, kneeL: 0, kneeR: 0, neckX: 0};
 }
 
 function updateCape(dt, t){
@@ -1285,16 +1458,23 @@ function buildShrines(){
       void main(){ float edge = pow(abs(dot(normalize(vN), normalize(vV))), 1.5); float a = uA * pow(1.0 - vUv.y, 1.6) * edge * (0.85 + 0.15*sin(uTime*3.0 + vUv.y*30.0)); gl_FragColor = vec4(uCol*a, a); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
   });
+  const sharedMats = {};
   SHRINE_XZ.forEach(([x, z], i) => {
     const y = groundH(x, z);
     const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = R()*6;
-    mesh(geoCyl(2.6, 3.0, 0.55, 8), stoneD, g, 0, 0.05, 0);
-    mesh(geoCyl(1.7, 2.0, 0.35, 8), stone, g, 0, 0.45, 0);
-    for (let k=0; k<6; k++) { const a = k/6*Math.PI*2; const b = boxMesh(stoneD, g, 0.5, rr(0.5, 1.1), 0.5, Math.cos(a)*3.6, 0.2, Math.sin(a)*3.6); b.rotation.set(rr(-.15,.15), a, rr(-.15,.15)); }
-    mesh(new THREE.CylinderGeometry(0.42, 0.62, 3.6, 4), mono, g, 0, 2.4, 0).rotation.y = Math.PI/4;
-    mesh(geoCone(0.42, 0.5, 4), mono, g, 0, 4.45, 0).rotation.y = Math.PI/4;
     const runeMat = new THREE.MeshBasicMaterial({map: TEX.rune, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, color: new THREE.Color(0.35, 0.5, 0.7), fog: false});
-    for (const s of [1, -1]) { const r = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 1.5), runeMat); r.position.set(0, 2.5, 0.4*s + 0.02*s); r.rotation.y = s > 0 ? 0 : Math.PI; g.add(r); }
+    if (MODEL.santuario) {
+      const inst = instantiateModel('santuario', {shared: sharedMats});
+      g.add(inst.root);
+      for (const n of ['runa_frente', 'runa_atras']) { const e = inst.root.getObjectByName(n); if (e) e.add(new THREE.Mesh(new THREE.PlaneGeometry(0.46, 1.5), runeMat)); }
+    } else {
+      mesh(geoCyl(2.6, 3.0, 0.55, 8), stoneD, g, 0, 0.05, 0);
+      mesh(geoCyl(1.7, 2.0, 0.35, 8), stone, g, 0, 0.45, 0);
+      for (let k=0; k<6; k++) { const a = k/6*Math.PI*2; const b = boxMesh(stoneD, g, 0.5, rr(0.5, 1.1), 0.5, Math.cos(a)*3.6, 0.2, Math.sin(a)*3.6); b.rotation.set(rr(-.15,.15), a, rr(-.15,.15)); }
+      mesh(new THREE.CylinderGeometry(0.42, 0.62, 3.6, 4), mono, g, 0, 2.4, 0).rotation.y = Math.PI/4;
+      mesh(geoCone(0.42, 0.5, 4), mono, g, 0, 4.45, 0).rotation.y = Math.PI/4;
+      for (const s of [1, -1]) { const r = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 1.5), runeMat); r.position.set(0, 2.5, 0.4*s + 0.02*s); r.rotation.y = s > 0 ? 0 : Math.PI; g.add(r); }
+    }
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 0.8, 160, 16, 1, true), beamMat());
     beam.geometry.translate(0, 80, 0); beam.position.y = 0.5; g.add(beam);
     const ringMat = new THREE.MeshBasicMaterial({color: new THREE.Color(1.0, 0.85, 0.45), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false});
@@ -1316,6 +1496,14 @@ const enemies = [];
 let boss = null;
 
 function buildWolf(){
+  if (MODEL.lobo) {
+    const inst = instantiateModel('lobo');
+    const g = new THREE.Group(); g.add(inst.root);
+    const f = n => inst.root.getObjectByName(n);
+    const P = {body: f('body'), head: f('head'), tail: f('tail'), legs: ['legFL', 'legFR', 'legBL', 'legBR'].map(f)};
+    g.scale.setScalar(1.12);
+    return {g, P, mats: inst.mats};
+  }
   const M = {fur: lamT(0x6c6660, TEX.fur, 1, 1), dark: lamT(0x3a3632, TEX.fur, 1, 1), light: lamT(0x9a9186, TEX.fur, 1, 1), nose: lam(0x141212), eye: new THREE.MeshBasicMaterial({color: new THREE.Color(1.6, 0.8, 0.2)})};
   const g = new THREE.Group(), P = {};
   P.body = new THREE.Group(); P.body.position.y = 0.66; g.add(P.body);
@@ -1343,7 +1531,28 @@ function buildWolf(){
   return {g, P, mats: [M.fur, M.dark, M.light]};
 }
 
+function addScarecrowEyes(P, M, isBoss){
+  P.eyes = []; P.glows = [];
+  for (const s of [1, -1]) {
+    P.eyes.push(mesh(geoSph(0.032, 6, 5), M.eye, P.head, 0.075*s, 0.03, 0.19));
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map: TEX.glow, color: isBoss ? new THREE.Color(1.6, 0.25, 0.1) : new THREE.Color(1.6, 0.75, 0.2), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0, fog: false}));
+    sp.scale.setScalar(0.28); sp.position.set(0.075*s, 0.03, 0.22); P.head.add(sp); P.glows.push(sp);
+  }
+}
+
 function buildScarecrow(isBoss){
+  if (MODEL.espantapajaros) {
+    const inst = instantiateModel('espantapajaros', isBoss ? {tint: {abrigo: new THREE.Color(0.55, 0.38, 0.33), sombrero: new THREE.Color(0.6, 0.55, 0.5)}} : null);
+    const g = new THREE.Group(); g.add(inst.root);
+    const f = n => inst.root.getObjectByName(n);
+    const P = {rig: f('rig'), body: f('body'), armL: f('armL'), armR: f('armR'), scythe: f('scythe'), head: f('head')};
+    const thorns = f('espinas'); if (thorns) thorns.visible = !!isBoss;
+    P.scythe.rotation.x = 0.35;
+    const M = {eye: new THREE.MeshBasicMaterial({color: new THREE.Color(0.05, 0.03, 0.02)})};
+    addScarecrowEyes(P, M, isBoss);
+    if (isBoss) g.scale.setScalar(3.3);
+    return {g, P, mats: inst.mats, M};
+  }
   const M = {
     wood: lamA(TEX.wood, 1, 2, {}, 0x6b4a2b),
     coat: TEX.coat ? lamA(TEX.coat, 2, 1, isBoss ? {color: new THREE.Color(0.55, 0.38, 0.33)} : {}) : lam(isBoss ? 0x3b2d25 : 0x4b4a30),
@@ -1384,13 +1593,7 @@ function buildScarecrow(isBoss){
   if (isBoss) {
     for (let k=0; k<7; k++) { const a = k/7*Math.PI*2; const th = mesh(geoCone(0.035, 0.32, 4), M.wood, hat, Math.cos(a)*0.3, 0.12, Math.sin(a)*0.3); th.rotation.set(Math.sin(a)*0.8, 0, -Math.cos(a)*0.8); }
   }
-  P.eyes = [];
-  P.glows = [];
-  for (const s of [1, -1]) {
-    P.eyes.push(mesh(geoSph(0.032, 6, 5), M.eye, P.head, 0.075*s, 0.03, 0.19));
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map: TEX.glow, color: isBoss ? new THREE.Color(1.6, 0.25, 0.1) : new THREE.Color(1.6, 0.75, 0.2), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0, fog: false}));
-    sp.scale.setScalar(0.28); sp.position.set(0.075*s, 0.03, 0.22); P.head.add(sp); P.glows.push(sp);
-  }
+  addScarecrowEyes(P, M, isBoss);
   if (isBoss) g.scale.setScalar(3.3);
   return {g, P, mats: [M.coat, M.straw, M.sack, M.hat, M.wood], M};
 }
@@ -2689,12 +2892,15 @@ async function boot(){
   const lf = $('lf'), lt = $('lt');
   const progress = v => { lf.style.width = (v*100) + '%'; };
   try {
-    let texProg = 0;
+    let texProg = 0, modProg = 0;
     const texLoad = loadTextures(v => { texProg = v; });
+    const modLoad = loadModels(v => { modProg = v; });
     lt.textContent = 'Modelando las colinas…';
-    await generateWorld(v => progress(v*0.92 + texProg*0.08));
-    lt.textContent = 'Cargando texturas de Blender…';
+    await generateWorld(v => progress(v*0.88 + texProg*0.06 + modProg*0.06));
+    lt.textContent = 'Cargando texturas y modelos de Blender…';
     const nTex = await texLoad;
+    const nMod = await modLoad;
+    if (nMod < MODEL_FILES.length) console.warn('Modelos de Blender cargados: ' + nMod + '/' + MODEL_FILES.length + ' (se usan figuras simples)');
     if (nTex < Object.keys(TEX_FILES).length) console.warn('Texturas de Blender cargadas: ' + nTex + '/' + Object.keys(TEX_FILES).length + ' (se usan respaldos)');
     lt.textContent = 'Plantando el bosque…';
     buildTextures();
