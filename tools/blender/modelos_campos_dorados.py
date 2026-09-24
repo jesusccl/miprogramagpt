@@ -45,6 +45,20 @@ MAT_COLORS = {
     'arpillera': '#a99366', 'sombrero': '#2e2a24', 'metal': '#9da3a6', 'hilo': '#241709', 'espina': '#3b2a1c',
     'piedra': '#958e7e', 'piedra_osc': '#6e695e', 'roca': '#8a857a', 'musgo': '#5d6a32',
     'corteza': '#4a3a2a', 'hojas': '#6f8a3a',
+    # equipo
+    'fieltro': '#2a2522', 'hierro': '#3c3b3d',
+    # pueblo y puerto
+    'yeso': '#e4dac3', 'teja': '#b5582f', 'tablas': '#7b5a39', 'viga': '#4a3524', 'vidrio': '#26303a',
+    'puerta': '#5a3b22', 'contraventana': '#3d6e8a', 'lampara': '#ffd27a', 'toldo': '#a3272c', 'faro_rojo': '#b3302c',
+    'agua_fuente': '#4a8aa0', 'fruta_roja': '#b02a2a', 'fruta_verde': '#6a9a3a', 'fruta_naranja': '#d8842a',
+    'tela_azul': '#2d4f8a', 'tela_verde': '#3f6a3a', 'flor': '#d8455a',
+    # barcos
+    'vela': '#e6dcc2', 'casco': '#3b2a1f', 'casco_color': '#2f4f6a', 'casco_franja': '#c9a03a', 'casco_fondo': '#5a2a20',
+    'casco_verde': '#2f5a4a', 'cubierta': '#8a6a44',
+    # vecinos
+    'camisa': '#dcd3bf', 'pantalon_azul': '#35486a', 'chaleco_v': '#5a3a28', 'delantal': '#cfc3a8', 'vestido': '#6a2e3e',
+    'rayas': '#1f2d55', 'cinta': '#d8c050', 'pelo_gris': '#8a8680', 'pelo_rubio': '#c9a45a', 'pelo_rojo': '#8a3a20',
+    'piel_osc': '#9c6a48', 'piel_clara': '#ecc6a0',
 }
 
 
@@ -437,6 +451,16 @@ def build_augusto():
         g.tube([(-0.17, -0.02, 0.1), (-0.08, -0.1, 0.153), (0.05, -0.19, 0.153), (0.16, -0.27, 0.125)], 0.012, 'cuero', 6, flat=0.35)
     part('torso', chest, (0, 0, 0), torso)
 
+    part('chaleco', chest, (0, 0, 0), lambda g: g.loft(
+        [(-0.28, 0.18, 0.142), (-0.18, 0.196, 0.152), (-0.08, 0.224, 0.16), (-0.02, 0.224, 0.152), (0.03, 0.18, 0.126)],
+        'cuero', seg=26, arc=(math.radians(112), math.radians(428))))
+
+    def buttons(g):
+        for y in (-0.06, -0.13, -0.2):
+            for sd in (1, -1):
+                g.sphere(0.012, 'oro', 8, 6, M4((0.055 * sd, y, 0.15), scale=(1, 1, 0.6)))
+    part('botones', chest, (0, 0, 0), buttons)
+
     def mantle(g):
         def f(p, a, i):
             k = (0.0, 0.2, 0.45, 0.7, 0.85, 1.0)[i]
@@ -499,6 +523,34 @@ def build_augusto():
         g.sphere(0.014, 'banda', 6, 5, M4((0, -0.195, 0.105)))
     part('sombrero', neck, (0, 0.25, 0), hat, rot=(-0.1, 0, 0), sharp=0)
 
+    def tricorn(g):
+        # ala levantada en tres lados con puntas bajas adelante y atrás
+        def lift(p, a, i):
+            corner = max(0.0, math.cos(1.5 * (a - math.pi / 2))) ** 6 + max(0.0, math.cos(1.5 * (a - math.pi / 2 - TAU / 3))) ** 6 \
+                + max(0.0, math.cos(1.5 * (a - math.pi / 2 + TAU / 3))) ** 6
+            L = max(0.0, 1.0 - 1.4 * corner) * (i / 3)
+            r = math.hypot(p[0], p[2])
+            k = (r - 0.07 * L) / max(r, 1e-6)
+            return (p[0] * k, p[1] + 0.13 * L, p[2] * k)
+        g.loft([(0.0, 0.15, 0.15), (0.004, 0.22, 0.22), (0.008, 0.28, 0.28), (0.014, 0.31, 0.31)], 'fieltro', seg=48,
+               cap0=False, cap1=False, fn=lift)
+        g.sphere(0.15, 'fieltro', 18, 10, M4((0, 0.03, 0), scale=(1.0, 0.85, 1.05)))
+        edge = []
+        for k in range(48):
+            a = TAU * k / 48
+            p = lift((math.cos(a) * 0.31, 0.016, math.sin(a) * 0.31), a, 3)
+            edge.append(p)
+        g.tube(edge, 0.009, 'oro', 5, closed=True)
+    part('tricornio', neck, (0, 0.24, 0), tricorn, rot=(-0.08, 0, 0), sharp=0)
+
+    def bandana(g):
+        g.sphere(0.133, 'rojo_osc', 20, 12, M4((0, 0.175, -0.012), scale=(1.0, 0.82, 1.04)),
+                 deform=lambda p: (p[0], max(p[1], 0.15 - 0.05 * max(0.0, -p[2]) / 0.13), p[2]))
+        g.sphere(0.03, 'rojo_osc', 8, 6, M4((0, 0.16, -0.14)))
+        g.tube([(0.01, 0.155, -0.145), (0.03, 0.08, -0.17), (0.05, 0.0, -0.16)], [0.024, 0.02, 0.012], 'rojo_osc', 6, flat=0.35)
+        g.tube([(-0.01, 0.155, -0.145), (-0.03, 0.09, -0.175), (-0.045, 0.03, -0.17)], [0.022, 0.018, 0.01], 'rojo_osc', 6, flat=0.35)
+    part('panuelo', neck, (0, 0, 0), bandana, sharp=0)
+
     for side, nm in ((-1, 'R'), (1, 'L')):
         sh = joint('sh' + nm, chest, (0.25 * side, -0.03, 0))
 
@@ -536,6 +588,49 @@ def build_augusto():
                 secs.append((-1.0, 0.0, 0.0, 0.0, 0.017))
                 g.loft(secs, 'acero', seg=4)
             part('espada', sword, (0, 0, 0), swordg, sharp=30)
+
+            def sable(g):
+                g.loft(bands(0.1, -0.09, 0.018, 0.018, 10, 0.1), 'cuero', seg=10)
+                g.sphere(0.022, 'oro', 10, 8, M4((0, 0.11, 0)))
+                g.tube([(0, 0.105, 0.02), (0, 0.08, 0.07), (0, 0.0, 0.088), (0, -0.08, 0.065), (0, -0.1, 0.02)], 0.007, 'oro', 6)
+                g.sphere(1.0, 'oro', 12, 8, M4((0, -0.1, 0.01), scale=(0.045, 0.018, 0.07)))
+                secs = [(-0.12 - t * 0.74, 0.005, 0.025 - 0.004 * t, 0.0, -0.05 * t * t) for t in (k / 11 for k in range(12))]
+                secs.append((-0.93, 0.0, 0.0, 0.0, -0.075))
+                g.loft(secs, 'acero', seg=4)
+            part('sable', sword, (0, 0, 0), sable, sharp=30)
+
+            def hacha(g):
+                g.loft([(0.13, 0.021, 0.021), (-0.45, 0.02, 0.02), (-0.7, 0.019, 0.019), (-0.74, 0.0, 0.0)], 'madera', seg=8)
+                g.loft(bands(0.1, -0.08, 0.023, 0.023, 8, 0.1), 'cuero', seg=8)
+                poly = [(0.02, -0.5), (0.13, -0.48), (0.22, -0.45), (0.27, -0.55), (0.28, -0.64), (0.24, -0.74), (0.14, -0.72), (0.02, -0.68)]
+                rings = [[(x, y, z) for z, y in poly] for x in (0.012, -0.012)]
+                g.rings(rings, 'hierro')
+                g.tube([(0, y, z) for z, y in poly[2:6]], 0.006, 'acero', 5)
+                g.loft([(0.0, 0.022, 0.022, 0.0, -0.59), (-0.14, 0.0, 0.0, 0.0, -0.59)], 'hierro', seg=6, axis='z')
+                g.loft([(-0.5, 0.03, 0.03), (-0.69, 0.03, 0.03)], 'hierro', seg=8)
+            part('hacha', sword, (0, 0, 0), hacha, sharp=30)
+
+            def katana(g):
+                g.loft(bands(0.12, -0.09, 0.016, 0.016, 12, 0.14), 'venda', seg=8)
+                g.sphere(0.017, 'hierro', 8, 6, M4((0, 0.125, 0), scale=(1, 0.6, 1)))
+                g.loft([(-0.095, 0.048, 0.048), (-0.107, 0.048, 0.048)], 'hierro', seg=20)
+                g.loft([(-0.107, 0.01, 0.02), (-0.13, 0.009, 0.018)], 'oro', seg=8)
+                secs = [(-0.13 - t * 0.92, 0.0045, 0.016 - 0.003 * t, 0.0, 0.04 * t * t) for t in (k / 13 for k in range(14))]
+                secs.append((-1.1, 0.0, 0.0, 0.0, 0.05))
+                g.loft(secs, 'acero', seg=4)
+            part('katana', sword, (0, 0, 0), katana, sharp=30)
+
+            def alba(g):
+                g.loft(bands(0.11, -0.09, 0.02, 0.02, 10, 0.1), 'cuero', seg=10)
+                g.sphere(0.03, 'oro', 10, 8, M4((0, 0.125, 0)))
+                g.sphere(0.014, 'rojo', 8, 6, M4((0, 0.125, 0.026)))
+                for sd in (1, -1):
+                    g.tube([(0, -0.1, 0), (0, -0.095, 0.06 * sd), (0, -0.06, 0.1 * sd), (0, -0.02, 0.11 * sd)], [0.012, 0.01, 0.008, 0.003], 'oro', 6)
+                secs = [(-0.11 - t * 0.85, 0.007, 0.03 - 0.006 * t) for t in (k / 11 for k in range(12))]
+                secs.append((-1.06, 0.0, 0.0))
+                g.loft(secs, 'acero', seg=4)
+                g.box('oro', M4((0, -0.5, 0), scale=(0.016, 0.66, 0.008)))
+            part('espada_alba', sword, (0, 0, 0), alba, sharp=30)
             joint('swordBase', sword, (0, -0.15, 0))
             joint('swordTip', sword, (0, -1.0, 0))
 
@@ -561,6 +656,8 @@ def build_augusto():
 
     bake_ao(0.14, rays=24, ground=0.0)
     export('augusto.glb')
+    for n in ('tricornio', 'panuelo', 'sable', 'hacha', 'katana', 'espada_alba', 'chaleco', 'botones'):
+        bpy.data.objects[n].hide_render = True
     preview('augusto.png', (0, 0.95, 0), 3.4, azim=math.radians(200))
 
 
@@ -918,7 +1015,7 @@ def build_rocas():
 
 
 # ---------------------------------------------------------------- muestrario
-def contact_sheet(names):
+def contact_sheet(names, out='muestrario_modelos.jpg'):
     tiles = []
     for n in names:
         path = os.path.join(PREV, n)
@@ -942,7 +1039,7 @@ def contact_sheet(names):
         x += t.shape[1] + 6
     img = bpy.data.images.new('hoja', width, 306)
     img.pixels[:] = sheet.reshape(-1)
-    img.filepath_raw = os.path.join(HERE, 'muestrario_modelos.jpg')
+    img.filepath_raw = os.path.join(HERE, out)
     img.file_format = 'JPEG'
     img.save()
 

@@ -538,7 +538,7 @@ def tex_burlap():
     render(sc, 'burlap.jpg', 512, 512)
 
 
-def tex_cape():
+def tex_cape(name='cape.png', ramp=('#6c0f19', '#8c1722', '#a8212c'), worn='#c24a47', hem='#3a0409', dark='#861621'):
     """Capa de lana carmesí con el emblema del sol y la espiga y borde rasgado."""
     sc = reset_scene()
     fr = (-0.8, -1.0, 1.6, 2.0)
@@ -546,13 +546,13 @@ def tex_cape():
     tw = b.math('SINE', b.mul(b.add(b.mul(b.u, 0.8), b.v), TAU * 110))
     folds = b.noise(b.torus((1, 0), (0, 1), 3.0, 0.25, 131), 1.4, 3, 0.5)
     fuzz = b.noise(b.torus(seed=132), 14, 8, 0.7)
-    base = b.ramp(b.v, [(0.0, '#6c0f19'), (0.35, '#8c1722'), (1.0, '#a8212c')])
+    base = b.ramp(b.v, [(0.0, ramp[0]), (0.35, ramp[1]), (1.0, ramp[2])])
     shade = b.add(b.add(0.78, b.mul(tw, 0.05)), b.add(b.mul(folds, 0.3), b.mul(fuzz, 0.12)))
     col = b.scale(base, shade)
-    worn = b.noise(b.torus(seed=133), 4, 6)
-    col = b.mix(b.mul(b.smooth(0.6, 0.75, worn), 0.35), col, '#c24a47')
+    wornn = b.noise(b.torus(seed=133), 4, 6)
+    col = b.mix(b.mul(b.smooth(0.6, 0.75, wornn), 0.35), col, worn)
     # ribete inferior
-    col = b.mix(b.mul(b.smooth(0.125, 0.13, b.v), b.smooth(0.165, 0.16, b.v)), col, '#3a0409')
+    col = b.mix(b.mul(b.smooth(0.125, 0.13, b.v), b.smooth(0.165, 0.16, b.v)), col, hem)
     col = b.mix(b.mul(b.smooth(0.112, 0.115, b.v), b.smooth(0.127, 0.124, b.v)), col, '#d8b877')
     # borde rasgado
     rip = b.noise((b.nt.nodes.new('ShaderNodeCombineXYZ').outputs[0], b.mul(b.u, 9.0)), 1.0, 3, 0.7)
@@ -562,7 +562,7 @@ def tex_cape():
     plane(b.mat, 1.0, 1.25)
     # emblema
     cy, px = 0.425, 0.00625
-    cream, dark = flat('#efe6d3', 'crema'), flat('#861621', 'carmesi')
+    cream, dark = flat('#efe6d3', 'crema'), flat(dark, 'carmesi')
     disk(cream, 0, cy, 44 * px, 0.01)
     ring(dark, 0, cy, 35.5 * px, 38.5 * px, 0.02)
     stalk = [(0.0 + 0.012 * math.sin(t * math.pi), cy - 30 * px + t * 58 * px) for t in (i / 12 for i in range(13))]
@@ -572,7 +572,203 @@ def tex_cape():
         for s in (-1, 1):
             ellipse(dark, s * 6 * px, yy, 4 * px, 8 * px, -s * 0.6, 0.04)
     ellipse(dark, 0, cy + 30 * px, 3.5 * px, 7 * px, 0, 0.04)
-    render(sc, 'cape.png', 512, 640, transparent=True)
+    render(sc, name, 512, 640, transparent=True)
+
+
+def tex_capas():
+    """Capas de otros colores para la sastrería."""
+    tex_cape('cape_azul.png', ('#0d1a36', '#16274c', '#21365e'), '#3b5a8a', '#050b18', '#16274c')
+    tex_cape('cape_verde.png', ('#0e2b19', '#173d24', '#215236'), '#3f7a4f', '#05130a', '#173d24')
+    tex_cape('cape_negra.png', ('#0e0e10', '#18181b', '#222226'), '#3d3d44', '#000000', '#2a2a2e')
+
+
+def tex_yeso():
+    """Yeso de las paredes del pueblo, con manchas y grietas finas."""
+    sc = reset_scene()
+    b = NB('yeso')
+    n = b.noise(b.torus(seed=141), 3.0, 8, 0.6)
+    col = b.ramp(n, [(0.3, '#cfc2a6'), (0.5, '#e4dac3'), (0.7, '#efe8d8')])
+    stain = b.noise(b.torus(seed=142), 1.8, 5, 0.6)
+    col = b.mix(b.mul(b.smooth(0.55, 0.75, stain), 0.4), col, '#b09a74')
+    cr = b.voronoi(b.torus(seed=143), 2.2, 'DISTANCE_TO_EDGE')
+    crack_mask = b.smooth(0.55, 0.62, b.noise(b.torus(seed=144), 2.5, 3))
+    col = b.mix(b.mul(b.smooth(0.012, 0.0, cr), crack_mask), col, '#7d6c55')
+    b.emit(col)
+    plane(b.mat)
+    render(sc, 'yeso.jpg', 512, 512)
+
+
+def tex_teja():
+    """Tejas de barro en hileras desfasadas."""
+    sc = reset_scene()
+    b = NB('teja')
+    rows, cols = 8.0, 8.0
+    rv = b.mul(b.v, rows)
+    row = b.math('FLOOR', rv)
+    fv = b.math('FRACT', rv)
+    off = b.mul(b.math('FLOORED_MODULO', row, 2.0), 0.5)
+    cu = b.add(b.mul(b.u, cols), off)
+    cell = b.math('FLOOR', cu)
+    fu = b.math('FRACT', cu)
+    prof = b.math('SINE', b.mul(fu, math.pi))
+    shade = b.mul(b.add(0.45, b.mul(prof, 0.55)), b.add(0.55, b.mul(b.smooth(0.0, 0.85, fv), 0.45)))
+    comb = b.nt.nodes.new('ShaderNodeCombineXYZ')
+    b.link(b.add(b.math('FLOORED_MODULO', cell, cols), 0.37), comb.inputs[0])
+    b.link(b.add(row, 0.61), comb.inputs[1])
+    nn = b.nt.nodes.new('ShaderNodeTexNoise')
+    nn.inputs['Scale'].default_value = 1.0
+    b.link(comb.outputs[0], nn.inputs['Vector'])
+    tile = b.ramp(nn.outputs['Fac'], [(0.3, '#8e3e22'), (0.5, '#b5582f'), (0.7, '#c9744a')])
+    col = b.scale(tile, shade)
+    col = b.mix(b.smooth(0.08, 0.0, fv), col, '#3a1a0e')
+    grime = b.noise(b.torus(seed=151), 3, 6)
+    col = b.mix(b.mul(b.smooth(0.55, 0.8, grime), 0.5), col, '#5f5a3e')
+    b.emit(col)
+    plane(b.mat)
+    render(sc, 'teja.jpg', 512, 512)
+
+
+def tex_tablas():
+    """Tablones de madera (muelles, cubiertas, puertas)."""
+    sc = reset_scene()
+    b = NB('tablas')
+    n_pl = 6.0
+    pv = b.mul(b.v, n_pl)
+    plank = b.math('FLOOR', pv)
+    fv = b.math('FRACT', pv)
+    shift = b.mul(b.math('FRACT', b.mul(plank, 0.618)), 1.0)
+    su = b.math('FRACT', b.add(b.mul(b.u, 2.0), shift))
+    grain = b.noise(b.torus((1, 0), (0, 1), 0.5, 9.0, 161), 2.0, 6, 0.6, 0.6)
+    col = b.ramp(grain, [(0.3, '#5a3f26'), (0.5, '#7b5a39'), (0.7, '#9a7a52')])
+    comb = b.nt.nodes.new('ShaderNodeCombineXYZ')
+    b.link(b.add(plank, 0.37), comb.inputs[0])
+    nn = b.nt.nodes.new('ShaderNodeTexNoise')
+    nn.inputs['Scale'].default_value = 1.0
+    b.link(comb.outputs[0], nn.inputs['Vector'])
+    tone = b.ramp(nn.outputs['Fac'], [(0.3, '#c9bba6'), (0.5, '#ffffff'), (0.7, '#f3e1c4')])
+    col = b.mix(1.0, col, tone, 'MULTIPLY')
+    col = b.mix(b.math('MAXIMUM', b.smooth(0.06, 0.0, fv), b.smooth(0.94, 1.0, fv)), col, '#1e140b')
+    col = b.mix(b.math('MAXIMUM', b.smooth(0.012, 0.0, su), b.smooth(0.988, 1.0, su)), col, '#24170c')
+    nails = b.mul(b.smooth(0.05, 0.03, b.math('ABSOLUTE', b.sub(su, 0.035))), b.smooth(0.08, 0.05, b.math('ABSOLUTE', b.sub(fv, 0.5))))
+    col = b.mix(nails, col, '#2c2926')
+    wear = b.noise(b.torus(seed=162), 3, 5)
+    col = b.mix(b.mul(b.smooth(0.55, 0.8, wear), 0.35), col, '#8f887b')
+    b.emit(col)
+    plane(b.mat)
+    render(sc, 'tablas.jpg', 512, 512)
+
+
+def tex_rayas():
+    """Tela a rayas azul marino y blanco (camisas de marinero)."""
+    sc = reset_scene()
+    b = NB('rayas')
+    st = b.math('FRACT', b.mul(b.v, 10.0))
+    band = b.smooth(0.22, 0.26, b.math('ABSOLUTE', b.sub(st, 0.5)))
+    col = b.mix(band, '#1f2d55', '#eee8da')
+    tw = b.math('SINE', b.mul(b.add(b.u, b.v), TAU * 90))
+    fuzz = b.noise(b.torus(seed=171), 12, 6, 0.7)
+    col = b.scale(col, b.add(0.85, b.add(b.mul(tw, 0.05), b.mul(fuzz, 0.18))))
+    b.emit(col)
+    plane(b.mat)
+    render(sc, 'rayas.jpg', 256, 256)
+
+
+def tex_toldo():
+    """Lona a rayas rojas y crema (toldos del mercado)."""
+    sc = reset_scene()
+    b = NB('toldo')
+    st = b.math('FRACT', b.mul(b.u, 8.0))
+    band = b.smooth(0.23, 0.27, b.math('ABSOLUTE', b.sub(st, 0.5)))
+    col = b.mix(band, '#a3272c', '#efe3c4')
+    fuzz = b.noise(b.torus(seed=181), 10, 6, 0.7)
+    stain = b.noise(b.torus(seed=182), 2, 4)
+    col = b.scale(col, b.add(0.82, b.mul(fuzz, 0.2)))
+    col = b.mix(b.mul(b.smooth(0.55, 0.75, stain), 0.3), col, '#6d5a3a')
+    b.emit(col)
+    plane(b.mat)
+    render(sc, 'toldo.jpg', 256, 256)
+
+
+def tex_vela():
+    """Lona de vela color hueso con costuras y remiendos."""
+    sc = reset_scene()
+    b = NB('vela')
+    fuzz = b.noise(b.torus(seed=191), 9, 8, 0.65)
+    col = b.ramp(fuzz, [(0.3, '#cdbf9f'), (0.55, '#e6dcc2'), (0.8, '#f2ead8')])
+    seam = b.math('FRACT', b.mul(b.v, 6.0))
+    col = b.mix(b.smooth(0.03, 0.0, b.math('ABSOLUTE', b.sub(seam, 0.5))), col, '#a8987a')
+    dots = b.math('SINE', b.mul(b.u, TAU * 60))
+    col = b.mix(b.mul(b.smooth(0.05, 0.02, b.math('ABSOLUTE', b.sub(seam, 0.46))), b.smooth(0.3, 0.8, dots)), col, '#8a7a5c')
+    patch = b.voronoi(b.torus(seed=192), 2.0, 'F1', out='Color')
+    pm = b.smooth(0.9, 0.93, b.voronoi(b.torus(seed=192), 2.0, 'F1', out='Color'))
+    col = b.mix(b.mul(pm, 0.6), col, '#d4c49c')
+    stain = b.noise(b.torus(seed=193), 2.5, 5)
+    col = b.mix(b.mul(b.smooth(0.58, 0.8, stain), 0.35), col, '#8f7f5e')
+    b.emit(col)
+    plane(b.mat)
+    render(sc, 'vela.jpg', 512, 512)
+
+
+def tex_bandera():
+    """Bandera original: rosa de los vientos blanca sobre azul marino, borde deshilachado."""
+    sc = reset_scene()
+    fr = (-1.0, -0.625, 2.0, 1.25)
+    b = NB('bandera', fr)
+    fuzz = b.noise(b.torus(seed=201), 10, 6, 0.7)
+    col = b.scale(b.ramp(b.u, [(0.0, '#1a2645'), (1.0, '#22325a')]), b.add(0.85, b.mul(fuzz, 0.25)))
+    col = b.mix(b.mul(b.smooth(0.03, 0.02, b.v), 1.0), col, '#c9a03a')
+    col = b.mix(b.smooth(0.97, 0.98, b.v), col, '#c9a03a')
+    rip = b.noise((b.nt.nodes.new('ShaderNodeCombineXYZ').outputs[0], b.mul(b.v, 11.0)), 1.0, 3, 0.7)
+    alpha = b.math('LESS_THAN', b.u, b.sub(0.985, b.mul(rip, 0.09)))
+    b.emit(col, alpha)
+    plane(b.mat, 1.25, 0.8)
+    white, gold = flat('#f1ead8', 'blanco'), flat('#d7ae45', 'oro')
+    ring(gold, 0, 0, 0.34, 0.38, 0.01)
+    for k in range(8):
+        a = k * math.pi / 4
+        L = 0.52 if k % 2 == 0 else 0.3
+        w = 0.07 if k % 2 == 0 else 0.05
+        tip = (math.cos(a) * L, math.sin(a) * L)
+        l = (math.cos(a + math.pi / 2) * w, math.sin(a + math.pi / 2) * w)
+        add_mesh('punta', [(0, 0, 0), (l[0], l[1], 0), (tip[0], tip[1], 0), (-l[0], -l[1], 0)], [(0, 1, 2, 3)], white if k % 2 == 0 else gold, 0.02)
+    disk(gold, 0, 0, 0.06, 0.03)
+    render(sc, 'bandera.png', 512, 320, transparent=True)
+
+
+def tex_adoquin():
+    """Adoquines redondeados para la plaza y las calles."""
+    sc = reset_scene()
+    b = NB('adoquin')
+    co = b.torus(seed=211)
+    edge = b.voronoi(co, 5.0, 'DISTANCE_TO_EDGE', 0.8)
+    cellc = b.voronoi(co, 5.0, 'F1', 0.8, out='Color')
+    stone = b.ramp(cellc, [(0.0, '#6e6a62'), (0.4, '#8b857a'), (0.7, '#9d9280'), (1.0, '#7f786c')])
+    bump = b.smooth(0.0, 0.12, edge)
+    det = b.noise(b.torus(seed=212), 12, 6, 0.6)
+    col = b.scale(stone, b.mul(b.add(0.55, b.mul(bump, 0.45)), b.add(0.85, b.mul(det, 0.3))))
+    col = b.mix(b.smooth(0.03, 0.0, edge), col, '#3a342b')
+    moss = b.noise(b.torus(seed=213), 3, 5)
+    col = b.mix(b.mul(b.smooth(0.55, 0.7, moss), b.smooth(0.05, 0.0, edge)), col, '#4f5a2a')
+    b.emit(col)
+    plane(b.mat)
+    render(sc, 'adoquin.jpg', 512, 512)
+
+
+def tex_arena():
+    """Arena de playa con ondulaciones y conchitas."""
+    sc = reset_scene()
+    b = NB('arena')
+    n = b.noise(b.torus(seed=221), 6, 8, 0.7)
+    col = b.ramp(n, [(0.3, '#c6b088'), (0.5, '#dbc8a0'), (0.7, '#e8d9b6')])
+    rip = b.math('SINE', b.add(b.mul(b.v, TAU * 14), b.mul(b.noise(b.torus(seed=222), 2.0, 3), 6.0)))
+    col = b.scale(col, b.add(0.94, b.mul(rip, 0.05)))
+    grain = b.noise(b.torus(seed=223), 40, 2, 0.5)
+    col = b.scale(col, b.add(0.9, b.mul(grain, 0.2)))
+    sh = b.voronoi(b.torus(seed=224), 18, 'F1')
+    col = b.mix(b.smooth(0.07, 0.04, sh), col, '#f4eee2')
+    b.emit(col)
+    plane(b.mat)
+    render(sc, 'arena.jpg', 512, 512)
 
 
 def tex_rune():
@@ -653,7 +849,8 @@ def contact_sheet(names):
 def main():
     os.makedirs(OUT, exist_ok=True)
     jobs = [tex_field, tex_ground, tex_forest, tex_rock, tex_stone, tex_bark, tex_wood, tex_straw,
-            tex_cloth, tex_coat, tex_fur, tex_leaves, tex_arpillera, tex_burlap, tex_cape, tex_rune]
+            tex_cloth, tex_coat, tex_fur, tex_leaves, tex_arpillera, tex_burlap, tex_cape, tex_rune,
+            tex_capas, tex_yeso, tex_teja, tex_tablas, tex_rayas, tex_toldo, tex_vela, tex_bandera, tex_adoquin, tex_arena]
     # permite regenerar solo algunas:  ... texturas_campos_dorados.py -- leaves cape
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:]
     wanted = {a for a in args if not a.startswith('-')}
@@ -663,7 +860,8 @@ def main():
         print(job.__doc__.strip().splitlines()[0])
         job()
     contact_sheet(['field.jpg', 'ground.jpg', 'forest.jpg', 'rock.jpg', 'stone.jpg', 'bark.jpg', 'wood.jpg', 'straw.jpg',
-                   'cloth.jpg', 'coat.jpg', 'fur.jpg', 'leaves.jpg', 'arpillera.jpg', 'burlap.jpg', 'cape.png', 'rune.png'])
+                   'cloth.jpg', 'coat.jpg', 'fur.jpg', 'leaves.jpg', 'arpillera.jpg', 'burlap.jpg', 'cape.png', 'rune.png', 'yeso.jpg', 'teja.jpg', 'tablas.jpg', 'rayas.jpg',
+                   'toldo.jpg', 'vela.jpg', 'bandera.png', 'adoquin.jpg', 'arena.jpg'])
 
 
 if __name__ == '__main__':
