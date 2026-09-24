@@ -489,7 +489,7 @@ async function generateWorld(progress){
 // ---------- terreno ----------
 function buildTerrain(){
   const SEG = (RES-1)/2, n = SEG+1;
-  const pos = new Float32Array(n*n*3), col = new Float32Array(n*n*3), gr = new Float32Array(n*n);
+  const pos = new Float32Array(n*n*3), col = new Float32Array(n*n*3), gr = new Float32Array(n*n), wt = new Float32Array(n*n*4);
   const cGold = LC(0xc49546), cDark = LC(0x6c7044), cPath = LC(0x927a58), cForest = LC(0x4a5431), cRock = LC(0x7d796d);
   const tmp = new THREE.Color();
   for (let j=0; j<n; j++) for (let i=0; i<n; i++) {
@@ -502,6 +502,7 @@ function buildTerrain(){
     tmp.lerp(cPath, HM[k+3]*0.9);
     col[v*3] = tmp.r; col[v*3+1] = tmp.g; col[v*3+2] = tmp.b;
     gr[v] = HM[k+1];
+    wt[v*4] = HM[k+2]; wt[v*4+1] = HM[k+3]; wt[v*4+2] = smooth(185, 240, d);
   }
   const idx = new Uint32Array(SEG*SEG*6);
   let p = 0;
@@ -517,10 +518,12 @@ function buildTerrain(){
   const nr = g.attributes.normal.array;
   for (let v=0; v<n*n; v++) {
     const steep = smooth(0.86, 0.7, nr[v*3+1]);
+    wt[v*4+3] = steep;
     if (steep > 0) { col[v*3] = lerp(col[v*3], cRock.r, steep); col[v*3+1] = lerp(col[v*3+1], cRock.g, steep); col[v*3+2] = lerp(col[v*3+2], cRock.b, steep); }
   }
   g.setAttribute('aCol', new THREE.BufferAttribute(col, 3));
   g.setAttribute('aGrass', new THREE.BufferAttribute(gr, 1));
+  g.setAttribute('aW', new THREE.BufferAttribute(wt, 4));
   const m = new THREE.Mesh(g, terrainMaterial());
   m.frustumCulled = false;
   scene.add(m);
@@ -529,26 +532,47 @@ function buildTerrain(){
 function terrainMaterial(){
   return new THREE.ShaderMaterial({
     uniforms: {uSunDir:U.uSunDir, uSunCol:U.uSunCol, uSkyCol:U.uSkyCol, uGndCol:U.uGndCol, uFogCol:U.uFogCol, uScatterCol:U.uScatterCol,
-      uFogDensity:U.uFogDensity, uShadow:U.uShadow, uNearC:U.uNearC, uNearR:U.uNearR},
+      uFogDensity:U.uFogDensity, uShadow:U.uShadow, uNearC:U.uNearC, uNearR:U.uNearR,
+      uHasTex: {value: TEX.field && TEX.ground && TEX.forest && TEX.rock ? 1 : 0},
+      uTexField: {value: TEX.field || null}, uTexGround: {value: TEX.ground || null}, uTexForest: {value: TEX.forest || null}, uTexRock: {value: TEX.rock || null}},
     vertexShader: `
-      attribute vec3 aCol; attribute float aGrass;
-      varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vGrass;
-      void main(){ vCol = aCol; vGrass = aGrass; vN = normal; vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+      attribute vec3 aCol; attribute float aGrass; attribute vec4 aW;
+      varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vGrass; varying vec4 vWt;
+      void main(){ vCol = aCol; vGrass = aGrass; vWt = aW; vN = normal; vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
     fragmentShader: `
       uniform vec3 uSunCol, uSkyCol, uGndCol; uniform vec4 uShadow[8]; uniform vec2 uNearC; uniform float uNearR;
-      varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vGrass;
+      uniform float uHasTex; uniform sampler2D uTexField, uTexGround, uTexForest, uTexRock;
+      varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vGrass; varying vec4 vWt;
       ${GLSL_NOISE}
       ${GLSL_FOG}
+      vec3 tl(sampler2D t, vec2 uv){ return pow(texture2D(t, uv).rgb, vec3(2.2)); }
       void main(){
         vec3 N = normalize(vN);
         vec3 alb = vCol;
         float n = vnoise(vW.xz*0.045)*0.55 + vnoise(vW.xz*0.23)*0.3 + vnoise(vW.xz*1.3)*0.15;
-        alb *= 0.74 + 0.46*n;
-        vec2 sw = vec2(vW.x*0.9 + vW.z*0.45, vW.z*0.9 - vW.x*0.45);
-        float streak = vnoise(vec2(sw.x*0.05, sw.y*0.6)) * vnoise(vec2(sw.x*0.02 + 5.0, sw.y*0.25));
-        alb *= mix(1.0, 0.7 + 0.6*streak, vGrass);
         float nearF = 1.0 - smoothstep(uNearR*0.62, uNearR*0.96, distance(vW.xz, uNearC));
-        alb = mix(alb, alb*vec3(0.3,0.25,0.19), vGrass*nearF);
+        vec2 sw = vec2(vW.x*0.9 + vW.z*0.45, vW.z*0.9 - vW.x*0.45);
+        if (uHasTex > 0.5) {
+          // texturas horneadas en Blender, mezcladas por bioma
+          vec3 field = mix(tl(uTexField, sw*0.05), tl(uTexField, sw*0.013 + 0.37), 0.4);
+          vec3 dark = field * vec3(0.55, 0.72, 0.5);
+          vec3 ground = tl(uTexGround, vW.xz*0.2);
+          vec3 forest = mix(tl(uTexForest, vW.xz*0.09), tl(uTexForest, vW.xz*0.021 + 0.5), 0.4);
+          vec3 bw = pow(abs(N), vec3(4.0)); bw /= (bw.x + bw.y + bw.z);
+          vec3 rp = vW*0.09;
+          vec3 rock = tl(uTexRock, rp.zy)*bw.x + tl(uTexRock, rp.xz)*bw.y + tl(uTexRock, rp.xy)*bw.z;
+          vec3 t = mix(field, dark, vWt.x*0.85);
+          t = mix(t, ground*1.15, vWt.y);
+          t = mix(t, forest, vWt.z);
+          t = mix(t, rock, vWt.w);
+          t = mix(t, ground*0.5, vGrass*nearF);
+          alb = t * (0.8 + 0.4*n);
+        } else {
+          alb *= 0.74 + 0.46*n;
+          float streak = vnoise(vec2(sw.x*0.05, sw.y*0.6)) * vnoise(vec2(sw.x*0.02 + 5.0, sw.y*0.25));
+          alb *= mix(1.0, 0.7 + 0.6*streak, vGrass);
+          alb = mix(alb, alb*vec3(0.3,0.25,0.19), vGrass*nearF);
+        }
         float sh = 1.0;
         for (int i=0;i<8;i++){ vec4 s = uShadow[i]; float d = distance(vW.xz, s.xy); sh *= 1.0 - s.w*(1.0 - smoothstep(s.z*0.25, s.z, d)); }
         float diff = max(dot(N, uSunDir), 0.0) * sh * mix(1.0, 0.78, vGrass);
@@ -588,6 +612,9 @@ function buildOuterRing(){
   if (flip < 0) { for (let i=0; i<idx.length; i+=3) { const t = idx[i+1]; idx[i+1] = idx[i+2]; idx[i+2] = t; } g.setIndex(idx); g.computeVertexNormals(); }
   g.setAttribute('aCol', new THREE.Float32BufferAttribute(col, 3));
   g.setAttribute('aGrass', new THREE.Float32BufferAttribute(new Float32Array(pos.length/3), 1));
+  const nv = pos.length/3, wt = new Float32Array(nv*4), nn = g.attributes.normal.array;
+  for (let v=0; v<nv; v++) { wt[v*4+2] = 1; wt[v*4+3] = smooth(0.85, 0.65, nn[v*3+1]); }
+  g.setAttribute('aW', new THREE.BufferAttribute(wt, 4));
   const m = new THREE.Mesh(g, terrainMaterial());
   m.frustumCulled = false;
   scene.add(m);
@@ -596,9 +623,14 @@ function buildOuterRing(){
 // ---------- material iluminado genérico (árboles, rocas) ----------
 function litMaterial(hex, opts){
   opts = opts || {};
+  const map = opts.map || null;
+  // modo 'tint': la textura aporta detalle normalizado; 'albedo': aporta el color
+  const gain = map ? (opts.mode === 'albedo' ? 1 : texGain(map)) : 1;
   return new THREE.ShaderMaterial({
+    defines: map ? {USE_TMAP: ''} : {},
     uniforms: {uColor:{value: LC(hex)}, uSway:{value: opts.sway||0}, uTime:U.uTime, uSunDir:U.uSunDir, uSunCol:U.uSunCol, uSkyCol:U.uSkyCol,
-      uGndCol:U.uGndCol, uFogCol:U.uFogCol, uScatterCol:U.uScatterCol, uFogDensity:U.uFogDensity},
+      uGndCol:U.uGndCol, uFogCol:U.uFogCol, uScatterCol:U.uScatterCol, uFogDensity:U.uFogDensity,
+      uMap: {value: map}, uMapScale: {value: opts.mapScale || 0.5}, uMapGain: {value: gain}},
     vertexShader: `
       uniform float uTime, uSway;
       varying vec3 vN; varying vec3 vW; varying vec3 vC;
@@ -623,11 +655,18 @@ function litMaterial(hex, opts){
       }`,
     fragmentShader: `
       uniform vec3 uColor, uSunCol, uSkyCol, uGndCol;
+      uniform sampler2D uMap; uniform float uMapScale, uMapGain;
       varying vec3 vN; varying vec3 vW; varying vec3 vC;
       ${GLSL_FOG}
+      vec3 tl(vec2 uv){ return pow(texture2D(uMap, uv).rgb, vec3(2.2)); }
       void main(){
         vec3 N = normalize(vN);
         vec3 alb = uColor * vC;
+        #ifdef USE_TMAP
+          vec3 bw = pow(abs(N), vec3(4.0)); bw /= (bw.x + bw.y + bw.z);
+          vec3 p = vW*uMapScale;
+          alb *= (tl(p.zy)*bw.x + tl(p.xz)*bw.y + tl(p.xy)*bw.z) * uMapGain;
+        #endif
         float diff = max(dot(N, uSunDir), 0.0);
         float wrap = max(dot(N, uSunDir)*0.5+0.5, 0.0);
         vec3 hemi = mix(uGndCol, uSkyCol, N.y*0.5+0.5);
@@ -645,8 +684,8 @@ function buildVegetation(){
   const F = worldObjs.forest;
   const trunkG = new THREE.CylinderGeometry(0.22, 0.34, 1, 6); trunkG.translate(0, 0.5, 0);
   const blobG = new THREE.IcosahedronGeometry(1, 1);
-  const trunks = new THREE.InstancedMesh(trunkG, litMaterial(0x4a3a2a), F.length + redTrees.length);
-  const blobs = new THREE.InstancedMesh(blobG, litMaterial(0xffffff, {sway: 0.05}), F.length*2);
+  const trunks = new THREE.InstancedMesh(trunkG, TEX.bark ? litMaterial(0xffffff, {map: TEX.bark, mode: 'albedo', mapScale: 0.9}) : litMaterial(0x4a3a2a), F.length + redTrees.length);
+  const blobs = new THREE.InstancedMesh(blobG, litMaterial(0xffffff, {sway: 0.05, map: TEX.leaves, mapScale: 0.35}), F.length*2);
   const greens = [0x3c4a26, 0x4a552e, 0x56602f, 0x34401f, 0x646634, 0x445229].map(LC);
   const autumn = [0x8f3b25, 0xa2542c, 0xb58a2c, 0x9a2f26].map(LC);
   let bi = 0, ti = 0;
@@ -669,7 +708,7 @@ function buildVegetation(){
     }
   }
   // árboles rojos
-  const redBlobs = new THREE.InstancedMesh(blobG, litMaterial(0xffffff, {sway: 0.06}), redTrees.length*5);
+  const redBlobs = new THREE.InstancedMesh(blobG, litMaterial(0xffffff, {sway: 0.06, map: TEX.leaves, mapScale: 0.45}), redTrees.length*5);
   const reds = [0xb3222b, 0xc8323a, 0x9b1c26, 0xd0443c, 0xa82a2f, 0xc02838].map(LC);
   let ri = 0;
   for (const t of redTrees) {
@@ -690,7 +729,7 @@ function buildVegetation(){
   [trunks, blobs, redBlobs].forEach(m => { m.frustumCulled = false; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; scene.add(m); });
   // rocas
   const rockG = new THREE.DodecahedronGeometry(1, 0);
-  const rocks = new THREE.InstancedMesh(rockG, litMaterial(0x8a857a), worldObjs.rocks.length);
+  const rocks = new THREE.InstancedMesh(rockG, TEX.rock ? litMaterial(0xffffff, {map: TEX.rock, mode: 'albedo', mapScale: 0.45}) : litMaterial(0x8a857a), worldObjs.rocks.length);
   worldObjs.rocks.forEach((r, i) => {
     dummy.position.set(r.x, r.y, r.z); dummy.rotation.set(r.rx, r.ry, 0); dummy.scale.set(r.s, r.s*r.sy, r.s*rr(0.8,1.2)); dummy.updateMatrix();
     rocks.setMatrixAt(i, dummy.matrix);
@@ -860,8 +899,62 @@ function canvasTex(w, h, draw, repeat){
   return t;
 }
 const TEX = {};
+// Texturas generadas con Blender: tools/blender/texturas_campos_dorados.py
+const TEX_BASE = 'assets/campos-dorados/';
+const TEX_FILES = {field: 'field.jpg', ground: 'ground.jpg', forest: 'forest.jpg', rock: 'rock.jpg', stone: 'stone.jpg', bark: 'bark.jpg',
+  wood: 'wood.jpg', straw: 'straw.jpg', cloth: 'cloth.jpg', coat: 'coat.jpg', fur: 'fur.jpg', leaves: 'leaves.jpg', burlap: 'burlap.jpg',
+  cape: 'cape.png', rune: 'rune.png'};
+function loadTextures(onProgress){
+  // desde file:// el navegador bloquea subir imágenes a WebGL: se usan las texturas de respaldo
+  if (location.protocol === 'file:') return Promise.resolve(0);
+  const loader = new THREE.TextureLoader();
+  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const keys = Object.keys(TEX_FILES);
+  let done = 0;
+  return Promise.all(keys.map(k => new Promise(res => {
+    loader.load(TEX_BASE + TEX_FILES[k], t => {
+      t.encoding = THREE.sRGBEncoding; t.anisotropy = aniso; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      TEX[k] = t; onProgress(++done/keys.length); res(1);
+    }, undefined, () => res(0));
+  }))).then(r => r.reduce((a, b) => a + b, 0));
+}
+// luminancia media (lineal) de una textura, para normalizar las que solo aportan detalle
+const texGains = new WeakMap(), repCache = new Map();
+function texGain(t){
+  if (texGains.has(t)) return texGains.get(t);
+  let g = 1;
+  try {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 16;
+    const c = cv.getContext('2d'); c.drawImage(t.image, 0, 0, 16, 16);
+    const d = c.getImageData(0, 0, 16, 16).data;
+    let sum = 0;
+    for (let i=0; i<d.length; i+=4) sum += 0.2126*Math.pow(d[i]/255, 2.2) + 0.7152*Math.pow(d[i+1]/255, 2.2) + 0.0722*Math.pow(d[i+2]/255, 2.2);
+    g = clamp(256/Math.max(sum, 1e-3), 0.8, 4);
+  } catch (e) {}
+  texGains.set(t, g);
+  return g;
+}
+// copia con otra repetición (en caché: cada combinación se sube una sola vez a la GPU)
+function rep(t, x, y){
+  if (!t) return null;
+  const k = t.uuid + ':' + x + ':' + y;
+  if (!repCache.has(k)) { const c = t.clone(); c.repeat.set(x, y); c.needsUpdate = true; repCache.set(k, c); }
+  return repCache.get(k);
+}
+// Lambert con textura que solo aporta detalle: el color del material se compensa con la luminancia media
+function lamT(hex, t, rx, ry, extra){
+  if (!t) return lam(hex, extra);
+  const m = lam(hex, Object.assign({map: rep(t, rx, ry)}, extra || {}));
+  m.color.multiplyScalar(texGain(t));
+  return m;
+}
+function lamA(t, rx, ry, extra, fallbackHex){
+  if (!t) return lam(fallbackHex, extra);
+  return new THREE.MeshLambertMaterial(Object.assign({map: rep(t, rx, ry)}, extra || {}));
+}
 function buildTextures(){
-  TEX.straw = canvasTex(128, 128, (g, w, h) => {
+  // respaldo en canvas solo para lo que no llegó desde assets/
+  if (!TEX.straw) TEX.straw = canvasTex(128, 128, (g, w, h) => {
     g.fillStyle = '#d6b262'; g.fillRect(0, 0, w, h);
     for (let i=0; i<260; i++) {
       const x = Math.random()*w, y = Math.random()*h, l = 6+Math.random()*18;
@@ -870,7 +963,7 @@ function buildTextures(){
     }
     for (let y=0; y<h; y+=8) { g.fillStyle = 'rgba(110,76,26,.18)'; g.fillRect(0, y, w, 1.5); }
   }, true);
-  TEX.cape = canvasTex(256, 320, (g, w, h) => {
+  if (!TEX.cape) TEX.cape = canvasTex(256, 320, (g, w, h) => {
     const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#a3202b'); gr.addColorStop(1, '#82141f');
     g.fillStyle = gr; g.fillRect(0, 0, w, h);
     for (let i=0; i<1400; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,.07)' : 'rgba(255,200,200,.05)'; g.fillRect(Math.random()*w, Math.random()*h, 2+Math.random()*3, 1); }
@@ -897,7 +990,7 @@ function buildTextures(){
     g.lineTo(w, h); g.closePath(); g.fill();
     g.globalCompositeOperation = 'source-over';
   });
-  TEX.sack = canvasTex(128, 128, (g, w, h) => {
+  if (!TEX.burlap) TEX.burlap = canvasTex(128, 128, (g, w, h) => {
     g.fillStyle = '#a99366'; g.fillRect(0, 0, w, h);
     for (let y=0; y<h; y+=3) { g.fillStyle = 'rgba(70,52,26,.2)'; g.fillRect(0, y, w, 1); }
     for (let x=0; x<w; x+=3) { g.fillStyle = 'rgba(70,52,26,.14)'; g.fillRect(x, 0, 1, h); }
@@ -909,7 +1002,7 @@ function buildTextures(){
     for (let x=16; x<=48; x+=5) { g.beginPath(); g.moveTo(x, 78); g.lineTo(x+2, 90); g.stroke(); }
     g.beginPath(); g.moveTo(8, 30); g.lineTo(58, 36); g.stroke();
   });
-  TEX.rune = canvasTex(64, 160, (g, w, h) => {
+  if (!TEX.rune) TEX.rune = canvasTex(64, 160, (g, w, h) => {
     g.clearRect(0, 0, w, h);
     g.strokeStyle = '#fff'; g.fillStyle = '#fff'; g.lineWidth = 4; g.lineCap = 'round';
     g.beginPath(); g.arc(32, 28, 14, 0, 7); g.stroke();
@@ -946,10 +1039,11 @@ const player = {
 };
 
 function buildPlayer(){
+  const C = TEX.cloth;
   const M = {
-    skin: lam(0xd8a67c), tunic: lam(0x4a5470), pants: lam(0x2b3048), boot: lam(0x4a3322), belt: lam(0x5b3a22),
-    red: lam(0xa3232d, {side: THREE.DoubleSide}), redDark: lam(0x7c1620), hair: lam(0x2a1f18),
-    straw: new THREE.MeshLambertMaterial({map: TEX.straw, side: THREE.DoubleSide}), band: lam(0x3658a8),
+    skin: lam(0xd8a67c), tunic: lamT(0x4a5470, C, 2, 2), pants: lamT(0x2b3048, C, 2, 2), boot: lamT(0x4a3322, C, 1, 1), belt: lamT(0x5b3a22, C, 2, 1),
+    red: lamT(0xa3232d, C, 4, 2, {side: THREE.DoubleSide}), redDark: lamT(0x7c1620, C, 3, 1), hair: lam(0x2a1f18),
+    straw: lamA(TEX.straw, 12, 1, {side: THREE.DoubleSide}, 0xd6b262), strawCrown: lamA(TEX.straw, 6, 1, {}, 0xd6b262), band: lamT(0x3658a8, C, 4, 1),
     steel: new THREE.MeshPhongMaterial({color: LC(0xd9dee4), shininess: 90, specular: LC(0x999999)}), wrap: lam(0x2a2320), gold: lam(0xc9a03a),
     cape: new THREE.MeshLambertMaterial({map: TEX.cape, side: THREE.DoubleSide, alphaTest: 0.5}),
   };
@@ -967,7 +1061,7 @@ function buildPlayer(){
   const hat = new THREE.Group(); hat.position.set(0, 0.25, 0); hat.rotation.x = -0.1; J.neck.add(hat);
   const brimG = new THREE.CylinderGeometry(0.17, 0.52, 0.1, 30, 1, true);
   mesh(brimG, M.straw, hat, 0, -0.02, 0);
-  mesh(geoCyl(0.14, 0.18, 0.13, 20), M.straw, hat, 0, 0.08, 0);
+  mesh(geoCyl(0.14, 0.18, 0.13, 20), M.strawCrown, hat, 0, 0.08, 0);
   mesh(geoCyl(0.182, 0.182, 0.045, 20), M.band, hat, 0, 0.04, 0);
   mesh(geoCyl(0.02, 0.14, 0.03, 20), M.band, hat, 0, 0.16, 0);
   // capa corta sobre hombros y bufanda
@@ -1182,7 +1276,8 @@ function buildBirds(){
 // ================== SANTUARIOS ==================
 const shrines = [];
 function buildShrines(){
-  const stone = lam(0x8f897c), stoneD = lam(0x6e695e);
+  const stone = TEX.stone ? lamA(TEX.stone, 3, 1) : lam(0x8f897c), stoneD = TEX.stone ? lamT(0xa9a293, TEX.stone, 4, 1) : lam(0x6e695e);
+  const mono = TEX.rock ? lamA(TEX.rock, 2, 3) : stone;
   const beamMat = () => new THREE.ShaderMaterial({
     uniforms: {uCol: {value: new THREE.Color(0.55, 0.75, 1.0)}, uA: {value: 0.22}, uTime: U.uTime},
     vertexShader: `varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv = uv; vec4 w = modelMatrix*vec4(position,1.0); vN = normalize(mat3(modelMatrix)*normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix*viewMatrix*w; }`,
@@ -1196,8 +1291,8 @@ function buildShrines(){
     mesh(geoCyl(2.6, 3.0, 0.55, 8), stoneD, g, 0, 0.05, 0);
     mesh(geoCyl(1.7, 2.0, 0.35, 8), stone, g, 0, 0.45, 0);
     for (let k=0; k<6; k++) { const a = k/6*Math.PI*2; const b = boxMesh(stoneD, g, 0.5, rr(0.5, 1.1), 0.5, Math.cos(a)*3.6, 0.2, Math.sin(a)*3.6); b.rotation.set(rr(-.15,.15), a, rr(-.15,.15)); }
-    const mono = mesh(new THREE.CylinderGeometry(0.42, 0.62, 3.6, 4), stone, g, 0, 2.4, 0); mono.rotation.y = Math.PI/4;
-    mesh(geoCone(0.42, 0.5, 4), stone, g, 0, 4.45, 0).rotation.y = Math.PI/4;
+    mesh(new THREE.CylinderGeometry(0.42, 0.62, 3.6, 4), mono, g, 0, 2.4, 0).rotation.y = Math.PI/4;
+    mesh(geoCone(0.42, 0.5, 4), mono, g, 0, 4.45, 0).rotation.y = Math.PI/4;
     const runeMat = new THREE.MeshBasicMaterial({map: TEX.rune, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, color: new THREE.Color(0.35, 0.5, 0.7), fog: false});
     for (const s of [1, -1]) { const r = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 1.5), runeMat); r.position.set(0, 2.5, 0.4*s + 0.02*s); r.rotation.y = s > 0 ? 0 : Math.PI; g.add(r); }
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 0.8, 160, 16, 1, true), beamMat());
@@ -1221,7 +1316,7 @@ const enemies = [];
 let boss = null;
 
 function buildWolf(){
-  const M = {fur: lam(0x6c6660), dark: lam(0x3a3632), light: lam(0x9a9186), nose: lam(0x141212), eye: new THREE.MeshBasicMaterial({color: new THREE.Color(1.6, 0.8, 0.2)})};
+  const M = {fur: lamT(0x6c6660, TEX.fur, 1, 1), dark: lamT(0x3a3632, TEX.fur, 1, 1), light: lamT(0x9a9186, TEX.fur, 1, 1), nose: lam(0x141212), eye: new THREE.MeshBasicMaterial({color: new THREE.Color(1.6, 0.8, 0.2)})};
   const g = new THREE.Group(), P = {};
   P.body = new THREE.Group(); P.body.position.y = 0.66; g.add(P.body);
   boxMesh(M.fur, P.body, 0.42, 0.4, 0.95, 0, 0, 0);
@@ -1250,8 +1345,10 @@ function buildWolf(){
 
 function buildScarecrow(isBoss){
   const M = {
-    wood: lam(0x6b4a2b), coat: lam(isBoss ? 0x3b2d25 : 0x4b4a30), straw: lam(0xcfa651), rope: lam(0x7a5a36), hat: lam(isBoss ? 0x1f1a17 : 0x2e2a24),
-    sack: new THREE.MeshLambertMaterial({map: TEX.sack}), metal: new THREE.MeshPhongMaterial({color: LC(0x9da3a6), shininess: 60, specular: LC(0x666666)}),
+    wood: lamA(TEX.wood, 1, 2, {}, 0x6b4a2b),
+    coat: TEX.coat ? lamA(TEX.coat, 2, 1, isBoss ? {color: new THREE.Color(0.55, 0.38, 0.33)} : {}) : lam(isBoss ? 0x3b2d25 : 0x4b4a30),
+    straw: lamA(TEX.field, 1, 1, {}, 0xcfa651), rope: lamT(0x7a5a36, TEX.cloth, 2, 1), hat: lamT(isBoss ? 0x1f1a17 : 0x2e2a24, TEX.cloth, 3, 2),
+    sack: new THREE.MeshLambertMaterial({map: TEX.burlap}), metal: new THREE.MeshPhongMaterial({color: LC(0x9da3a6), shininess: 60, specular: LC(0x666666)}),
     eye: new THREE.MeshBasicMaterial({color: new THREE.Color(0.05, 0.03, 0.02)}),
   };
   const g = new THREE.Group(), P = {};
@@ -2592,8 +2689,13 @@ async function boot(){
   const lf = $('lf'), lt = $('lt');
   const progress = v => { lf.style.width = (v*100) + '%'; };
   try {
+    let texProg = 0;
+    const texLoad = loadTextures(v => { texProg = v; });
     lt.textContent = 'Modelando las colinas…';
-    await generateWorld(progress);
+    await generateWorld(v => progress(v*0.92 + texProg*0.08));
+    lt.textContent = 'Cargando texturas de Blender…';
+    const nTex = await texLoad;
+    if (nTex < Object.keys(TEX_FILES).length) console.warn('Texturas de Blender cargadas: ' + nTex + '/' + Object.keys(TEX_FILES).length + ' (se usan respaldos)');
     lt.textContent = 'Plantando el bosque…';
     buildTextures();
     buildTerrain(); progress(0.78); await tick();
