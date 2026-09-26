@@ -149,6 +149,11 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;outline:non
 #tRun{right:176px;bottom:84px;width:50px;height:50px;font-size:18px}
 #tJump{right:186px;bottom:20px;width:54px;height:54px;font-size:20px}
 #tPause{right:14px;top:56px;width:38px;height:38px;font-size:14px}
+#tMap{right:60px;top:56px;width:38px;height:38px;font-size:16px}
+#mapBox{position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(10,7,3,.55);pointer-events:none}
+#mapBox canvas{width:min(78vh,90vw);height:min(78vh,90vw);border:1px solid rgba(255,228,165,.5);box-shadow:0 10px 40px rgba(0,0,0,.6);image-rendering:auto}
+#mapBox .mt{font-family:'Cinzel',serif;font-weight:700;letter-spacing:.2em;color:#f7dc92;font-size:14px;text-shadow:0 1px 4px #000}
+#mapBox .mh{font-size:11px;color:#e6d6ae;text-shadow:0 1px 3px #000}
 @media (max-height:480px){#compass{top:6px}#objective,#score{top:8px}#bossBar{bottom:40px}}
 </style>
 </head>
@@ -204,6 +209,7 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;outline:non
   <div class="tb" id="tJump">⤒</div>
   <div class="tb hidden" id="tAct">E</div>
   <div class="tb" id="tPause">❚❚</div>
+  <div class="tb" id="tMap">⌖</div>
 </div>
 
 <div id="pause" class="overlay hidden">
@@ -216,6 +222,8 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;outline:non
   <div class="gfx" id="gfxPause"></div>
   <div style="font-size:12px;color:#cdbf9f">Sonido: <span id="muteLbl">activado</span> (tecla M)</div>
 </div>
+
+<div id="mapBox" class="hidden"><div class="mt">MAPA DE BAHÍA SERENA Y LAS ISLAS</div><canvas id="mapCv" width="512" height="512"></canvas><div class="mh" id="mapHint"></div></div>
 
 <div id="shop" class="hidden">
   <div class="shopBox">
@@ -2515,6 +2523,7 @@ addEventListener('keydown', e => {
     if (e.code === 'KeyR' || e.code === 'KeyQ') player.healBuf = 0.3;
     if (e.code === 'KeyE') interact();
     if (e.code === 'KeyF') player.jumpBuf = 0.25;
+    if (e.code === 'Tab' || e.code === 'KeyN') toggleMap();
     if (e.code === 'KeyP' || (e.code === 'Escape' && !pointerLocked)) { if (G.dialog) closeDialog(); else pauseGame(); }
   } else if (state === 'paused') {
     if (e.code === 'KeyP' || e.code === 'Escape') resumeGame();
@@ -2570,6 +2579,7 @@ function setupTouch(){
   btn('tHeal', () => { player.healBuf = 0.3; });
   btn('tAct', () => interact());
   btn('tJump', () => { player.jumpBuf = 0.25; });
+  btn('tMap', () => toggleMap());
   btn('tRun', () => { input.sprintToggle = !input.sprintToggle; $('tRun').style.background = input.sprintToggle ? 'rgba(160,32,40,.6)' : ''; });
   btn('tPause', () => pauseGame());
   addEventListener('touchstart', e => {
@@ -4307,6 +4317,69 @@ function nearestInteract(){
   return best;
 }
 
+// ================== MAPA ==================
+let mapBase = null, mapOpen = false, mapT = 0;
+function buildMapBase(){
+  const S = 512, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(S, S), d = img.data;
+  const toW = i => -HALF + (i + 0.5)/S*WORLD;
+  const cSea0 = [110, 170, 180], cSea1 = [28, 62, 96], cSand = [222, 202, 150], cGold = [201, 160, 82], cGreen = [104, 140, 66], cForest = [58, 84, 46], cRock = [128, 122, 110], cTown = [196, 120, 80];
+  const mix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
+  for (let j=0; j<S; j++) for (let i=0; i<S; i++) {
+    const x = toW(i), z = toW(j), h = groundH(x, z), k = (j*S + i)*4;
+    let c;
+    if (h < SEA) c = mix(cSea0, cSea1, smooth(0, 14, SEA - h));
+    else {
+      const dd = Math.hypot(x, z), {e} = isleDist(x, z);
+      c = mix(cGold, cGreen, clamp(sampleHM(x, z, 2)*0.8 + (e < 1.1 ? 0.6 : 0), 0, 1));
+      c = mix(c, cForest, smooth(185, 240, dd)*(1 - smooth(0.8, 0.55, bayAng(x, z)))*(e < 1.3 ? 0 : 1)*smooth(SEA + 3, SEA + 6, h));
+      c = mix(c, cSand, smooth(SEA + 2.8, SEA + 1.2, h));
+      c = mix(c, [150, 122, 88], sampleHM(x, z, 3)*0.8);
+      c = mix(c, cTown, paveK(x, z)*0.8 + (townDist(x, z) < TOWN.r ? 0.25 : 0));
+      // sombreado de relieve (luz del noroeste)
+      const sh = clamp(1 + (groundH(x - 3, z - 3) - groundH(x + 3, z + 3))*0.06, 0.6, 1.3);
+      c = [c[0]*sh, c[1]*sh, c[2]*sh];
+      c = mix(c, cRock, smooth(0.9, 1.6, Math.abs(groundH(x + 3, z) - groundH(x - 3, z))/6)*0.6);
+    }
+    d[k] = c[0]; d[k+1] = c[1]; d[k+2] = c[2]; d[k+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  mapBase = cv;
+}
+function toggleMap(force){
+  mapOpen = force !== undefined ? force : !mapOpen;
+  if (mapOpen && !mapBase) buildMapBase();
+  $('mapBox').classList.toggle('hidden', !mapOpen);
+  $('mapHint').textContent = (IS_TOUCH ? 'Toca ⌖ para cerrar' : 'Tab / N para cerrar') + ' · ◈ tesoros · ◆ santuarios · ● pueblo · ⛵ La Golondrina';
+  if (mapOpen) drawMap();
+}
+function drawMap(){
+  const cv = $('mapCv'), ctx = cv.getContext('2d'), S = cv.width;
+  const P = (x, z) => [(x + HALF)/WORLD*S, (z + HALF)/WORLD*S];
+  ctx.drawImage(mapBase, 0, 0, S, S);
+  ctx.font = 'bold 12px Cinzel, Georgia, serif'; ctx.textAlign = 'center';
+  const label = (t, x, z, dy) => { const [u, v] = P(x, z); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillText(t, u + 1, v + dy + 1); ctx.fillStyle = '#fff3d6'; ctx.fillText(t, u, v + dy); };
+  for (const I of ISLANDS) label(I.name, I.x, I.z - I.r - 6, 0);
+  label('Bahía Serena', TOWN.x, TOWN.z - 44, 0);
+  label('La Pradera', 0, -20, 0);
+  const dot = (x, z, r, fill, stroke, diamond) => {
+    const [u, v] = P(x, z);
+    ctx.beginPath();
+    if (diamond) { ctx.moveTo(u, v - r); ctx.lineTo(u + r, v); ctx.lineTo(u, v + r); ctx.lineTo(u - r, v); ctx.closePath(); }
+    else ctx.arc(u, v, r, 0, Math.PI*2);
+    ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = stroke; ctx.stroke();
+  };
+  dot(TOWN.x, TOWN.z, 5, '#e0b040', '#3a2408');
+  for (const sh of shrines) dot(sh.x, sh.z, 5, sh.state === 'lit' ? '#f5c94f' : '#9fb4c9', '#1a1a1a', true);
+  for (const c of chests) if (!c.open) dot(c.x, c.z, 5, '#f2c84e', '#5a3a08', true);
+  if (boat.g) { const [u, v] = P(boat.pos.x, boat.pos.z); ctx.font = '15px serif'; ctx.fillText('⛵', u, v + 5); }
+  // Augusto: flecha según hacia dónde mira
+  const [u, v] = P(player.pos.x, player.pos.z), a = player.onBoat ? boat.heading : player.facing;
+  ctx.save(); ctx.translate(u, v); ctx.rotate(-a + Math.PI);
+  ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(6, 7); ctx.lineTo(0, 3); ctx.lineTo(-6, 7); ctx.closePath();
+  ctx.fillStyle = '#d23c32'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
+}
+
 // ================== HUD ==================
 const toastEl = $('toast');
 let toastTimer = 0;
@@ -4333,7 +4406,7 @@ function updateObjective(){
   if (G.bossDead) el.innerHTML = 'La pradera está en paz';
   else if (G.bossSpawned) el.innerHTML = '✦ Derrota al Guardián del Trigo<small>Rueda para esquivar sus ondas de choque</small>';
   else el.innerHTML = `✦ Santuarios del Alba: ${G.shrinesLit}/5<small>Sigue los pilares de luz · ◆ en la brújula</small><small>● Bahía Serena: tiendas y vecinos</small>`;
-  if (chests.length && boat.g) el.innerHTML += `<div class="tres">◈ Tesoros: ${G.treasures || 0}/${chests.length}<small>${G.sailedOnce ? 'Busca los cofres en las islas del sur' : 'La Golondrina espera en el muelle este'}</small></div>`;
+  if (chests.length && boat.g) el.innerHTML += `<div class="tres">◈ Tesoros: ${G.treasures || 0}/${chests.length}<small>${(G.treasures || 0) >= chests.length ? '¡Todos los tesoros encontrados!' : G.sailedOnce ? 'Busca los cofres en las islas y calas · Tab: mapa' : 'La Golondrina espera en el muelle este'}</small></div>`;
 }
 function buildFlasks(){
   const f = $('flasks'); f.innerHTML = '';
@@ -4420,6 +4493,7 @@ function updateHUD(dt){
   if (IS_TOUCH) $('tAct').classList.toggle('hidden', !show && !G.dialog);
   // toast
   if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) toastEl.style.opacity = 0; }
+  if (mapOpen && (mapT -= dt) <= 0) { mapT = 0.25; drawMap(); }
   // barra del jefe
   if (boss) {
     boss.hpShown = boss.hpShown > boss.hp ? Math.max(boss.hp, boss.hpShown - dt*60) : boss.hp;
@@ -4629,7 +4703,9 @@ function endGame(win){
   $('endTitle').textContent = win ? 'EL CAMPO RENACE' : 'HAS CAÍDO';
   $('endSub').textContent = win ? 'EL GUARDIÁN DEL TRIGO DESCANSA' : 'LA PRADERA AÚN ESPERA';
   const mm = Math.floor(G.time/60), ss = String(Math.floor(G.time%60)).padStart(2, '0');
-  $('endStats').innerHTML = `Santuarios encendidos <b>${G.shrinesLit}/5</b><br>Enemigos derrotados <b>${G.kills}</b><br>Tiempo <b>${mm}:${ss}</b>` +
+  if (mapOpen) toggleMap(false);
+  $('endStats').innerHTML = `Santuarios encendidos <b>${G.shrinesLit}/5</b><br>Enemigos derrotados <b>${G.kills}</b>` +
+    (chests.length && boat.g ? `<br>Tesoros encontrados <b>${G.treasures || 0}/${chests.length}</b>` : '') + `<br>Tiempo <b>${mm}:${ss}</b>` +
     (win ? `<br>Bono de tiempo <b>+${timeBonus}</b><br>Bono de vida <b>+${hpBonus}</b>` : '') +
     `<div class="total">Puntuación <b>${total}</b></div>`;
   $('hud').classList.add('hidden'); $('touch').classList.add('hidden');
@@ -5019,8 +5095,8 @@ addEventListener('resize', onResize);
 
 function fillControls(){
   const rows = IS_TOUCH
-    ? [['Joystick', 'moverse · navegar'], ['Arrastrar', 'mirar'], ['⚔', 'atacar (combo x3)'], ['↻', 'rodar / esquivar'], ['⤒', 'saltar'], ['✚', 'beber elixir'], ['»', 'correr'], ['E', 'hablar · comerciar · cofres · barco']]
-    : [['WASD', 'moverse · navegar'], ['Ratón', 'cámara'], ['Clic / J', 'atacar (combo x3)'], ['Espacio', 'rodar / esquivar'], ['F', 'saltar'], ['Shift', 'correr'], ['E', 'hablar · cofres · barco'], ['R', 'beber elixir'], ['Rueda', 'zoom'], ['P / Esc', 'pausa'], ['M', 'silenciar']];
+    ? [['Joystick', 'moverse · navegar'], ['Arrastrar', 'mirar'], ['⚔', 'atacar (combo x3)'], ['↻', 'rodar / esquivar'], ['⤒', 'saltar'], ['✚', 'beber elixir'], ['»', 'correr'], ['E', 'hablar · comerciar · cofres · barco'], ['⌖', 'mapa']]
+    : [['WASD', 'moverse · navegar'], ['Ratón', 'cámara'], ['Clic / J', 'atacar (combo x3)'], ['Espacio', 'rodar / esquivar'], ['F', 'saltar'], ['Shift', 'correr'], ['E', 'hablar · cofres · barco'], ['Tab / N', 'mapa'], ['R', 'beber elixir'], ['Rueda', 'zoom'], ['P / Esc', 'pausa'], ['M', 'silenciar']];
   const html = rows.map(([k, v]) => `<div><b>${k}</b>${v}</div>`).join('');
   $('ctrlList').innerHTML = html; $('ctrlList2').innerHTML = html;
 }
@@ -5094,7 +5170,7 @@ $('btnRetry').addEventListener('click', () => { $('endScreen').classList.add('hi
 requestAnimationFrame(frame);
 boot();
 window.__game = {player, enemies, shrines, G, cam, spawnEnemy, interact, keys, npcs, SAVE, buyOrEquip, openShop, closeShop, talkTo, platforms, get state(){ return state; }, set state(v){ state = v; }, startGame, spawnBoss, lightShrine, damagePlayer,
-  boat, chests, boardBoat, leaveBoat, landingSpot, openChest, ISLANDS, ISLE_SPOTS, groundH, coastR, fauna,
+  boat, chests, boardBoat, leaveBoat, landingSpot, openChest, ISLANDS, ISLE_SPOTS, groundH, coastR, fauna, toggleMap,
   // avanza la simulación sin dibujar (pruebas automáticas)
   step(sec){ const dt = 1/30; for (let i=0; i<sec*30; i++) { U.uTime.value += dt; update(dt); updateNPCs(dt); updatePort(dt, U.uTime.value); updateFauna(dt); fxAdd.update(dt); fxNorm.update(dt); updateCamera(dt); } },
   setGfx, get gfx(){ return {level: gfxLevel, auto: gfxAuto, shadow: SHADOW.on, shadowSize: SHADOW.size, post: POST.on, msaa: POST.msaa, fxaa: POST.fxaa, rays: POST.rays, pr: pixelRatio}; }};
