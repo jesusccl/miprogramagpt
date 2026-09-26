@@ -887,7 +887,7 @@ function buildTerrain(){
     if (hmax < SEA - 9) continue;   // fondo marino profundo: el agua lo tapa
     const near = Math.hypot(cx, cz) < 560 || ISLANDS.some(I => Math.hypot(cx - I.x, cz - I.z) < I.r + 90);
     const step = near ? 2 : 4, n = CH/step + 1, nv = n*n + 4*n;
-    const pos = new Float32Array(nv*3), nor = new Float32Array(nv*3), col = new Float32Array(nv*3), gr = new Float32Array(nv), wt = new Float32Array(nv*4), ab = new Float32Array(nv*2);
+    const pos = new Float32Array(nv*3), nor = new Float32Array(nv*3), col = new Float32Array(nv*3), gr = new Float32Array(nv), wt = new Float32Array(nv*4), ab = new Float32Array(nv*3);
     const put = (v, i, j, drop) => {
       const k = (j*RES + i)*4, x = -HALF + i*CELL, z = -HALF + j*CELL, h = HM[k];
       pos[v*3] = x; pos[v*3+1] = h - drop; pos[v*3+2] = z;
@@ -904,10 +904,11 @@ function buildTerrain(){
       wt[v*4] = HM[k+2]; wt[v*4+1] = HM[k+3]; wt[v*4+2] = forest;
       const steep = smooth(0.86, 0.7, nor[v*3+1]);
       wt[v*4+3] = steep;
-      ab[v*2] = paveK(x, z);
+      ab[v*3] = paveK(x, z);
       const outer = Math.max(isle, smooth(R - 140, R - 80, d), open*smooth(140, 170, d));
-      ab[v*2+1] = Math.max(open*smooth(SEA + 2.7, SEA + 1.7, h), outer*smooth(SEA + 3.0, SEA + 1.8, h));
-      tmp.lerp(cSand, ab[v*2+1]).lerp(cPave, ab[v*2]).lerp(cRock, steep);
+      ab[v*3+1] = Math.max(open*smooth(SEA + 2.7, SEA + 1.7, h), outer*smooth(SEA + 3.0, SEA + 1.8, h));
+      ab[v*3+2] = isle*HM[k+2]*smooth(SEA + 2.0, SEA + 4.0, h);   // verde tropical de las islas
+      tmp.lerp(cSand, ab[v*3+1]).lerp(cPave, ab[v*3]).lerp(cRock, steep);
       col[v*3] = tmp.r; col[v*3+1] = tmp.g; col[v*3+2] = tmp.b;
     };
     let v = 0;
@@ -932,7 +933,7 @@ function buildTerrain(){
     g.setAttribute('aCol', new THREE.BufferAttribute(col, 3));
     g.setAttribute('aGrass', new THREE.BufferAttribute(gr, 1));
     g.setAttribute('aW', new THREE.BufferAttribute(wt, 4));
-    g.setAttribute('aB', new THREE.BufferAttribute(ab, 2));
+    g.setAttribute('aB', new THREE.BufferAttribute(ab, 3));
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(cx, (hmax + hmin)/2, cz), Math.hypot(CH*CELL*0.72, (hmax - hmin)/2 + 4));
     scene.add(new THREE.Mesh(g, mat));
   }
@@ -946,13 +947,13 @@ function terrainMaterial(){
       uTexField: {value: TEX.field || null}, uTexGround: {value: TEX.ground || null}, uTexForest: {value: TEX.forest || null}, uTexRock: {value: TEX.rock || null},
       uTexSand: {value: TEX.arena || null}, uTexCobble: {value: TEX.adoquin || null}, uSea: {value: SEA}}),
     vertexShader: `
-      attribute vec3 aCol; attribute float aGrass; attribute vec4 aW; attribute vec2 aB;
-      varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vGrass; varying vec4 vWt; varying vec2 vB;
+      attribute vec3 aCol; attribute float aGrass; attribute vec4 aW; attribute vec3 aB;
+      varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vGrass; varying vec4 vWt; varying vec3 vB;
       void main(){ vCol = aCol; vGrass = aGrass; vWt = aW; vB = aB; vN = normal; vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
     fragmentShader: `
       uniform vec3 uSunCol, uSkyCol, uGndCol; uniform vec4 uShadow[8]; uniform vec2 uNearC; uniform float uNearR;
       uniform float uHasTex, uSea, uBump; uniform sampler2D uTexField, uTexGround, uTexForest, uTexRock, uTexSand, uTexCobble;
-      varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vGrass; varying vec4 vWt; varying vec2 vB;
+      varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vGrass; varying vec4 vWt; varying vec3 vB;
       ${GLSL_NOISE}
       ${GLSL_FOG}
       ${GLSL_SUN}
@@ -977,6 +978,7 @@ function terrainMaterial(){
           vec3 t = mix(field, dark, vWt.x*0.85);
           t = mix(t, ground*1.15, vWt.y);
           t = mix(t, forest, vWt.z);
+          t = mix(t, mix(field, forest, 0.45)*vec3(0.62, 0.95, 0.46)*1.2, vB.z);
           t = mix(t, rock, vWt.w);
           t = mix(t, ground*0.5, vGrass*nearF);
           t = mix(t, tl(uTexSand, vW.xz*0.12), vB.y);
@@ -1044,7 +1046,7 @@ function buildOuterRing(){
   const nv = pos.length/3, wt = new Float32Array(nv*4), nn = g.attributes.normal.array;
   for (let v=0; v<nv; v++) { wt[v*4+2] = 1; wt[v*4+3] = smooth(0.85, 0.65, nn[v*3+1]); }
   g.setAttribute('aW', new THREE.BufferAttribute(wt, 4));
-  g.setAttribute('aB', new THREE.BufferAttribute(new Float32Array(nv*2), 2));
+  g.setAttribute('aB', new THREE.BufferAttribute(new Float32Array(nv*3), 3));
   const m = new THREE.Mesh(g, terrainMaterial());
   m.frustumCulled = false;
   scene.add(m);
@@ -3762,14 +3764,15 @@ function resetChests(){ for (const c of chests) { c.open = false; c.t = 0; if (c
 // ================== NAVEGACIÓN: LA GOLONDRINA ==================
 const WIND = new THREE.Vector2(0.9, 0.45).normalize();
 const boat = {g: null, boom: null, rudder: null, pos: new THREE.Vector3(), heading: 0, speed: 0, turn: 0, L: 8.4, B: 1.35,
-  home: {x: 18.2, z: 161, h: 0}, pilot: new THREE.Vector3(0.42, 0.72, -2.75), roll: 0, pitch: 0, boomY: 0, wakeT: 0, creakT: 3, bumpT: 0};
+  home: {x: 18.2, z: 167, h: 0}, pilot: new THREE.Vector3(0.42, 0.72, -2.75), roll: 0, pitch: 0, boomY: 0, wakeT: 0, creakT: 3, bumpT: 0};
 function seaAmp(x, z){ return 0.03 + 0.22*smooth(1, 14, SEA - groundH(x, z)); }
 function waveY(x, z, t){ return (Math.sin(x*0.11 + t*0.9) + 1.2*Math.sin(z*0.08 - t*0.7 + x*0.04))*seaAmp(x, z); }
 function buildBoat(){
   const src = MODEL.barcos && MODEL.barcos.getObjectByName('golondrina');
   if (!src) return;
   const inst = src.clone(true); inst.position.set(0, 0, 0);
-  inst.traverse(o => { if (o.isMesh) o.material = staticMat(o.material.name, !!o.geometry.attributes.color); });
+  // de día el farol de popa va apagado (cristal)
+  inst.traverse(o => { if (o.isMesh) o.material = staticMat(o.material.name === 'lampara' ? 'vidrio' : o.material.name, !!o.geometry.attributes.color); });
   const g = new THREE.Group(); g.add(inst); g.rotation.order = 'YXZ';
   scene.add(g);
   boat.g = g; boat.boom = inst.getObjectByName('golondrina_botavara'); boat.rudder = inst.getObjectByName('golondrina_timon');
