@@ -59,6 +59,11 @@ MAT_COLORS = {
     'camisa': '#dcd3bf', 'pantalon_azul': '#35486a', 'chaleco_v': '#5a3a28', 'delantal': '#cfc3a8', 'vestido': '#6a2e3e',
     'rayas': '#1f2d55', 'cinta': '#d8c050', 'pelo_gris': '#8a8680', 'pelo_rubio': '#c9a45a', 'pelo_rojo': '#8a3a20',
     'piel_osc': '#9c6a48', 'piel_clara': '#ecc6a0',
+    # rasgos de la cara
+    'ojo_blanco': '#efe9df', 'iris_marron': '#4a2e18', 'iris_azul': '#2e5a8a', 'iris_verde': '#3a6a2e', 'labios': '#a85a50',
+    'suela': '#1e1712',
+    # fauna
+    'delfin': '#6d7f8c', 'delfin_vientre': '#d9dcd6', 'cangrejo': '#c2502a', 'ala': '#e8a030', 'ala_borde': '#2a1f18', 'pez': '#9ab0b8',
 }
 
 
@@ -407,6 +412,67 @@ def preview(fname, target, dist, elev=0.32, azim=0.75, size=(420, 420)):
         bpy.ops.render.render(write_still=True)
 
 
+# ---------------------------------------------------------------- rasgos comunes de los personajes
+def face(g, skin, hair, iris='iris_marron', brow=0.0, smile=0.4):
+    """Cabeza con cara: ojos (blanco, iris y pupila) con párpados, cejas, nariz, labios y orejas.
+    Coordenadas del cuello: la cabeza es una esfera de radio 0.12 centrada en y=0.15."""
+    def jaw(p):
+        x, y, z = p
+        dy = y - 0.15
+        if dy < 0:
+            k = min(1.0, -dy / 0.12)
+            x *= 1 - 0.21 * k
+            z = z * (1 - 0.07 * k) + (0.014 * k if z > 0 else 0.0)
+        if z > 0.06 and -0.035 < dy < 0.0:   # pómulos
+            x *= 1.0 + 0.035 * (1 - abs(dy + 0.017) / 0.018)
+        if z > 0.07 and 0.0 < dy < 0.03 and abs(x) < 0.07:   # cuencas de los ojos
+            z -= 0.006 * math.sin(math.pi * dy / 0.03) * (1 - abs(abs(x) - 0.041) / 0.03 if abs(abs(x) - 0.041) < 0.03 else 0)
+        return (x, y, z)
+    g.sphere(0.12, skin, 26, 18, M4((0, 0.15, 0), scale=(0.93, 1.06, 1.0)), deform=jaw)
+    for s in (1, -1):
+        c = Vector((0.041 * s, 0.166, 0.097))
+        g.sphere(0.02, 'ojo_blanco', 12, 10, M4(tuple(c)))
+        g.sphere(0.0115, iris, 12, 8, M4((c.x, c.y, c.z + 0.0165), scale=(1, 1, 0.42)))
+        g.sphere(0.0056, 'ojo', 8, 6, M4((c.x, c.y, c.z + 0.0205), scale=(1, 1, 0.4)))
+        # párpados: casquete superior e inferior de piel sobre el globo ocular
+        g.sphere(0.0215, skin, 12, 8, M4(tuple(c), rot=(-0.25, 0, 0)), deform=lambda p, cy=c.y: (p[0], max(p[1], cy + 0.005), p[2]))
+        g.sphere(0.0212, skin, 12, 8, M4(tuple(c), rot=(0.3, 0, 0)), deform=lambda p, cy=c.y: (p[0], min(p[1], cy - 0.012), p[2]))
+        # cejas
+        g.tube([(0.018 * s, 0.19 + brow * 0.004, 0.114), (0.04 * s, 0.195 + brow * 0.006, 0.113), (0.063 * s, 0.19 - brow * 0.004, 0.103)],
+               [0.0055, 0.0065, 0.0045], hair, 6, flat=0.45)
+        # orejas con reborde
+        g.sphere(1.0, skin, 10, 8, M4((0.111 * s, 0.152, -0.008), rot=(0, 0.25 * s, 0), scale=(0.012, 0.032, 0.023)))
+        g.tube([(0.118 * s, 0.128, 0.004), (0.123 * s, 0.155, 0.012), (0.121 * s, 0.182, 0.0), (0.117 * s, 0.176, -0.022), (0.114 * s, 0.14, -0.018)],
+               0.0045, skin, 5)
+    # nariz: tabique, punta y aletas
+    g.tube([(0, 0.168, 0.112), (0, 0.145, 0.124), (0, 0.128, 0.132)], [0.008, 0.011, 0.012], skin, 8)
+    g.sphere(0.0125, skin, 10, 8, M4((0, 0.127, 0.131), scale=(1.15, 0.9, 1.0)))
+    for s in (1, -1):
+        g.sphere(0.008, skin, 8, 6, M4((0.011 * s, 0.123, 0.125), scale=(1.1, 0.9, 1.0)))
+    # labios con las comisuras según la sonrisa
+    up = [(-0.024, 0.1035 + 0.003 * smile, 0.112), (-0.011, 0.105, 0.118), (0.0, 0.1045, 0.12), (0.011, 0.105, 0.118), (0.024, 0.1035 + 0.003 * smile, 0.112)]
+    lo = [(-0.021, 0.1005 + 0.003 * smile, 0.112), (0.0, 0.097, 0.119), (0.021, 0.1005 + 0.003 * smile, 0.112)]
+    g.tube(up, [0.003, 0.0042, 0.004, 0.0042, 0.003], 'labios', 6, flat=0.6)
+    g.tube(lo, [0.0035, 0.0052, 0.0035], 'labios', 6, flat=0.6)
+
+
+def hand(g, skin, side, grip=0.3):
+    """Mano colgando a lo largo de -y: palma hacia el cuerpo, cuatro dedos y pulgar (grip 0 abierta, 1 cerrada)."""
+    inward = -side
+    g.loft([(0.018, 0.017, 0.03), (-0.02, 0.019, 0.036), (-0.058, 0.016, 0.037), (-0.07, 0.013, 0.033)], skin, seg=10,
+           M=M4((inward * 0.002, 0, 0)))
+    for k, L in enumerate((0.046, 0.052, 0.049, 0.04)):
+        z = 0.024 - k * 0.016
+        base = Vector((0.0, -0.068, z))
+        mid = base + Vector((inward * 0.012 * grip, -L * 0.52, 0.0))
+        tip = base + Vector((inward * (0.006 + 0.04 * grip), -L * (0.98 - 0.45 * grip), 0.0))
+        g.tube([base, mid, tip], [0.0092, 0.0084, 0.0072], skin, 6)
+        g.sphere(0.0072, skin, 6, 5, M4(tuple(tip)))
+    g.tube([(inward * 0.012, -0.018, 0.028), (inward * 0.022, -0.04, 0.042), (inward * (0.02 + 0.012 * grip), -0.06, 0.05)],
+           [0.011, 0.0095, 0.008], skin, 6)
+    g.sphere(0.0078, skin, 6, 5, M4((inward * (0.02 + 0.012 * grip), -0.06, 0.05)))
+
+
 # ================================================================ AUGUSTO
 def build_augusto():
     reset()
@@ -493,14 +559,14 @@ def build_augusto():
                 x *= 1 - 0.22 * k
                 z = z * (1 - 0.08 * k) + (0.012 * k if z > 0 else 0.0)
             return (x, y, z)
-        g.sphere(0.12, 'piel', 22, 16, M4((0, 0.15, 0), scale=(0.93, 1.06, 1.0)), deform=jaw)
-        g.ico(1.0, 'piel', 1, M4((0, 0.135, 0.118), scale=(0.018, 0.026, 0.022)))
-        for s in (1, -1):
-            g.sphere(1.0, 'piel', 8, 6, M4((0.112 * s, 0.15, -0.005), scale=(0.014, 0.034, 0.026)))
-            g.sphere(0.014, 'ojo', 8, 6, M4((0.04 * s, 0.165, 0.104)))
-            g.box('pelo', M4((0.043 * s, 0.188, 0.108), rot=(0.2, 0, -0.18 * s), scale=(0.036, 0.009, 0.012)))
-        g.box('ojo', M4((0, 0.1, 0.106), scale=(0.028, 0.004, 0.006)))
+        face(g, 'piel', 'pelo', 'iris_marron', brow=0.6, smile=0.5)
         g.sphere(0.127, 'pelo', 18, 12, M4((0, 0.172, -0.016), scale=(1.0, 0.85, 1.02)))
+        # flequillo y patillas
+        for k in range(7):
+            x = -0.066 + k * 0.022
+            g.tube([(x, 0.262, 0.06), (x * 1.08, 0.238, 0.095), (x * 1.12 + 0.01, 0.208, 0.107)], [0.014, 0.01, 0.003], 'pelo', 8)
+        for s in (1, -1):
+            g.tube([(0.1 * s, 0.19, 0.04), (0.108 * s, 0.155, 0.05), (0.106 * s, 0.128, 0.052)], [0.012, 0.01, 0.004], 'pelo', 5)
         for k in range(9):
             a = math.pi + (k - 4) * 0.33
             base = Vector((math.sin(a) * 0.105, 0.14, math.cos(a) * 0.105 - 0.02))
@@ -519,7 +585,7 @@ def build_augusto():
         g.loft([(-0.005, 0.13, 0.13), (0.035, 0.125, 0.125)], 'banda', seg=24, cap0=False, cap1=False)
         g.sphere(0.018, 'paja', 8, 6, M4((0, 0.225, 0), scale=(1, 0.7, 1)))
         for sd in (1, -1):
-            g.tube([(0.115 * sd, -0.01, 0.0), (0.1 * sd, -0.1, 0.05), (0.03 * sd, -0.19, 0.1)], 0.006, 'banda', 5)
+            g.tube([(0.118 * sd, -0.01, 0.0), (0.112 * sd, -0.11, 0.035), (0.085 * sd, -0.17, 0.085), (0.03 * sd, -0.196, 0.108)], 0.005, 'banda', 5)
         g.sphere(0.014, 'banda', 6, 5, M4((0, -0.195, 0.105)))
     part('sombrero', neck, (0, 0.25, 0), hat, rot=(-0.1, 0, 0), sharp=0)
 
@@ -565,16 +631,15 @@ def build_augusto():
             g.loft(bands(0.0, -0.235, 0.046, 0.038, 12, 0.07), 'venda', seg=12)
             g.loft([(-0.212, 0.045, 0.043), (-0.248, 0.045, 0.043)], 'cuero', seg=12)
         part('antebrazo' + nm, el, (0, 0, 0), fore)
-        hand = joint('hand' + nm, el, (0, -0.29, 0))
+        hand_j = joint('hand' + nm, el, (0, -0.29, 0))
 
-        def handg(g, side=side):
-            g.sphere(0.045, 'piel', 12, 8, M4((0, 0.0, 0.0), scale=(0.85, 1.12, 0.95)))
-            g.sphere(0.018, 'piel', 8, 6, M4((0.028 * side, 0.012, 0.032), scale=(1, 1.5, 1)))
-            for k in range(4):
-                g.sphere(0.013, 'piel', 6, 5, M4((-0.004 * side, 0.03 - k * 0.019, 0.037)))
-        part('mano' + nm, hand, (0, 0, 0), handg)
+        def handg(g, side=side, nm=nm):
+            # la derecha empuña la espada; la izquierda va más relajada
+            hand(g, 'piel', side, grip=0.95 if nm == 'R' else 0.35)
+            g.loft([(0.01, 0.034, 0.042), (-0.03, 0.036, 0.044)], 'cuero', seg=12)
+        part('mano' + nm, hand_j, (0, 0, 0), handg)
         if nm == 'R':
-            sword = joint('sword', hand, (0, 0, 0))
+            sword = joint('sword', hand_j, (0, 0, 0))
 
             def swordg(g):
                 g.loft(bands(0.1, -0.098, 0.019, 0.019, 10, 0.1), 'cuero', seg=10)
@@ -651,7 +716,10 @@ def build_augusto():
             g.loft([(-0.31, 0.053, 0.055), (-0.39, 0.057, 0.061), (-0.44, 0.059, 0.064)], 'cuero', seg=12)
             g.loft([(-0.075, 0.054, 0.042, 0.0, -0.432), (-0.02, 0.06, 0.05, 0.0, -0.428), (0.06, 0.056, 0.042, 0.0, -0.438),
                     (0.13, 0.046, 0.032, 0.0, -0.446), (0.172, 0.0, 0.0, 0.0, -0.45)], 'cuero', seg=12, axis='z')
-            g.box('vaina', M4((0, -0.462, 0.045), scale=(0.118, 0.018, 0.255)))
+            g.box('suela', M4((0, -0.462, 0.045), scale=(0.118, 0.022, 0.26)))
+            g.box('suela', M4((0, -0.448, -0.06), scale=(0.1, 0.03, 0.07)))
+            for k in range(3):
+                g.tube([(-0.035, -0.37 - k * 0.02, 0.05 + k * 0.012), (0.035, -0.37 - k * 0.02, 0.05 + k * 0.012)], 0.004, 'venda', 4)
         part('pierna' + nm, knee, (0, 0, 0), shin)
 
     bake_ao(0.14, rays=24, ground=0.0)
@@ -933,7 +1001,7 @@ def build_arboles():
     reset()
     root = joint('arboles', None, (0, 0, 0))
     # los árboles se separan para hornear la oclusión sin que se tapen entre sí
-    OFF = {'pino': 0.0, 'roble': 30.0, 'rojo': 60.0}
+    OFF = {'pino': 0.0, 'roble': 30.0, 'rojo': 60.0, 'palma': 90.0}
 
     def pino_tronco(g):
         g.loft([(-0.3, 0.34, 0.34), (0.0, 0.3, 0.3), (1.5, 0.21, 0.21), (4.5, 0.12, 0.12), (7.6, 0.04, 0.04)], 'corteza', seg=8,
@@ -976,17 +1044,51 @@ def build_arboles():
                                     ((0.9, 4.4, -0.7), 0.9), ((-0.8, 4.4, 0.7), 0.9))):
             g.ico(r, 'hojas', 2, M4(c, rot=(k, k * 1.7, k * 0.4)), deform=lambda p, k=k: fnoise(p, 1.3, 0.16, 60 + k))
 
+    # palmera de las islas: tronco curvo anillado y penachos de hojas colgantes
+    PALM_TOP = Vector((1.35, 7.2, 0.0))
+
+    def palma_tronco(g):
+        path = [Vector((0.0, -0.3, 0.0))]
+        for k in range(1, 15):
+            t = k / 14
+            path.append(Vector((1.35 * t ** 2.2, -0.3 + 7.5 * t, 0.0)))
+        radii = [0.3 * (1.0 - 0.45 * (k / 14)) * (1.0 + 0.1 * (k % 2)) for k in range(15)]
+        g.tube(path, radii, 'corteza', 9, fn=lambda p, i, a: fnoise(p, 2.5, 0.05, 33))
+        for k in range(4):
+            a = k * 1.7
+            g.sphere(0.13, 'corteza', 8, 6, M4(PALM_TOP + Vector((math.cos(a) * 0.2, -0.35, math.sin(a) * 0.2))))
+
+    def palma_copa(g):
+        for n in range(13):
+            a = TAU * n / 13 + 0.3 * math.sin(n * 2.1)
+            L = 3.3 + 0.6 * math.sin(n * 1.7)
+            lift = 1.1 - 0.6 * (n % 3) / 2
+            d = Vector((math.cos(a), 0.0, math.sin(a)))
+            side = Vector((-d.z, 0.0, d.x))
+            rings = []
+            m = 18
+            for k in range(m + 1):
+                t = k / m
+                c = PALM_TOP + d * (L * t) + Vector((0, lift * math.sin(t * 2.4) - 1.8 * t * t, 0))
+                w = (0.1 + 0.85 * math.sin(math.pi * min(1.0, t * 1.1)) ** 0.7) * (0.62 if k % 2 else 1.0)
+                h = 0.05 * (1 - t) + 0.01
+                rings.append([c - side * w + Vector((0, -0.12 * w, 0)), c + Vector((0, h, 0)), c + side * w + Vector((0, -0.12 * w, 0)),
+                              c + Vector((0, -h * 0.5, 0))])
+            g.rings(rings, 'hojas', closed=True, cap0=False, cap1=False)
+        g.sphere(0.35, 'hojas', 10, 6, M4(PALM_TOP + Vector((0, 0.05, 0)), scale=(1.0, 0.6, 1.0)))
+
     objs = []
     for name, fn in (('pino_tronco', pino_tronco), ('pino_copa', pino_copa), ('roble_tronco', roble_tronco),
-                     ('roble_copa', roble_copa), ('rojo_tronco', rojo_tronco), ('rojo_copa', rojo_copa)):
+                     ('roble_copa', roble_copa), ('rojo_tronco', rojo_tronco), ('rojo_copa', rojo_copa),
+                     ('palma_tronco', palma_tronco), ('palma_copa', palma_copa)):
         objs.append(part(name, root, (OFF[name.split('_')[0]], 0, 0), fn, sharp=0))
     bake_ao(2.2, rays=20, ground=0.0, min_ao=0.35)
     for o in objs:
         o.location.x = 0.0
     export('arboles.glb')
     for o in objs:
-        o.location.x = OFF[o.name.split('_')[0]] * 0.25
-    preview('arboles.png', (7.5, 3.5, 0), 26.0, elev=0.12, azim=0.0, size=(640, 420))
+        o.location.x = OFF[o.name.split('_')[0]] * 0.19
+    preview('arboles.png', (9.0, 4.4, 0), 34.0, elev=0.12, azim=0.0, size=(760, 420))
 
 
 # ================================================================ ROCAS
@@ -1012,6 +1114,67 @@ def build_rocas():
     for i, o in enumerate(objs):
         o.location.x = i * 2.6
     preview('rocas.png', (2.6, 0.1, 0), 7.5, elev=0.3, azim=0.2, size=(560, 360))
+
+
+# ================================================================ FAUNA
+def build_fauna():
+    """Delfín, cangrejo, mariposa (alas articuladas) y pez; todos miran a +Z."""
+    reset()
+    roots = []
+
+    def delfin(g):
+        secs = [(-1.02, 0.03, 0.02, 0, 0.02), (-0.84, 0.09, 0.075, 0, 0.02), (-0.5, 0.19, 0.18, 0, 0.0), (-0.12, 0.26, 0.26, 0, 0.0),
+                (0.28, 0.25, 0.26, 0, 0.0), (0.6, 0.18, 0.19, 0, -0.02), (0.8, 0.12, 0.12, 0, -0.04), (0.92, 0.07, 0.055, 0, -0.07),
+                (1.1, 0.045, 0.034, 0, -0.085), (1.19, 0.0, 0.0, 0, -0.085)]
+        _, fs = g.loft(secs, 'delfin', seg=18, axis='z')
+        g.recolor(fs, lambda c: 'delfin_vientre' if c.y < -0.07 and c.z > -0.7 else None)
+        g.tube([(0, 0.2, 0.12), (0, 0.36, -0.02), (0, 0.5, -0.2)], [0.12, 0.07, 0.008], 'delfin', 8, flat=0.18)
+        for sd in (1, -1):
+            g.tube([(sd * 0.18, -0.1, 0.45), (sd * 0.36, -0.2, 0.3), (sd * 0.45, -0.26, 0.15)], [0.07, 0.045, 0.008], 'delfin', 8, flat=0.2)
+            g.tube([(0, 0.0, -0.95), (sd * 0.22, 0.0, -1.1), (sd * 0.36, 0.0, -1.2)], [0.08, 0.06, 0.01], 'delfin', 8, flat=0.15)
+            g.sphere(0.018, 'ojo', 8, 6, M4((sd * 0.13, 0.03, 0.78)))
+        g.tube([(-0.05, -0.07, 1.05), (0.0, -0.075, 1.12), (0.05, -0.07, 1.05)], 0.005, 'ojo', 4)
+
+    def cangrejo(g):
+        g.sphere(0.13, 'cangrejo', 16, 10, M4((0, 0.08, 0), scale=(1.25, 0.5, 0.95)), deform=lambda p: fnoise(p, 8, 0.03, 5))
+        for sd in (1, -1):
+            for k in range(4):
+                z = 0.07 - k * 0.05
+                g.tube([(sd * 0.13, 0.08, z), (sd * 0.24, 0.13, z - 0.01), (sd * 0.3, 0.0, z - 0.03)], [0.018, 0.014, 0.008], 'cangrejo', 5)
+            g.tube([(sd * 0.1, 0.08, 0.1), (sd * 0.18, 0.12, 0.2), (sd * 0.14, 0.12, 0.28)], [0.025, 0.022, 0.02], 'cangrejo', 6)
+            g.sphere(0.055, 'cangrejo', 10, 8, M4((sd * 0.14, 0.12, 0.31), scale=(0.8, 0.6, 1.2)))
+            g.tube([(sd * 0.04, 0.12, 0.1), (sd * 0.05, 0.18, 0.12)], 0.008, 'cangrejo', 4)
+            g.sphere(0.016, 'ojo', 6, 5, M4((sd * 0.05, 0.19, 0.12)))
+
+    def pez(g):
+        g.loft([(-0.14, 0.0, 0.0), (-0.1, 0.02, 0.012), (0.0, 0.045, 0.025), (0.1, 0.03, 0.02), (0.15, 0.0, 0.0)], 'pez', seg=10, axis='z')
+        g.tube([(0, 0, -0.12), (0, 0.05, -0.2)], [0.03, 0.004], 'pez', 5, flat=0.2)
+        g.tube([(0, 0, -0.12), (0, -0.05, -0.2)], [0.03, 0.004], 'pez', 5, flat=0.2)
+
+    for i, (name, fn) in enumerate((('delfin', delfin), ('cangrejo', cangrejo), ('pez', pez))):
+        r = joint(name, None, (i * 5.0, 0, 0))
+        part(name + '_malla', r, (0, 0, 0), fn, sharp=0 if name != 'cangrejo' else 40)
+        roots.append(r)
+    # mariposa: cuerpo y dos alas que aletean (articulaciones mariposa_alaL / mariposa_alaR)
+    mr = joint('mariposa', None, (15.0, 0, 0))
+    part('mariposa_cuerpo', mr, (0, 0, 0), lambda g: g.loft([(-0.035, 0.0, 0.0), (-0.02, 0.006, 0.006), (0.02, 0.007, 0.007), (0.03, 0.0, 0.0)],
+                                                            'ala_borde', seg=6, axis='z'))
+    for sd, nm in ((1, 'L'), (-1, 'R')):
+        wj = joint('mariposa_ala' + nm, mr, (0, 0, 0))
+
+        def wing(g, sd=sd):
+            pts = [(0, 0, 0.02), (sd * 0.05, 0, 0.055), (sd * 0.075, 0, 0.03), (sd * 0.06, 0, -0.005), (sd * 0.07, 0, -0.035), (sd * 0.035, 0, -0.045), (0, 0, -0.02)]
+            g.mesh(pts, [tuple(range(len(pts)))], 'ala')
+            g.tube([(sd * 0.012, 0.0005, 0.03), (sd * 0.05, 0.0005, 0.05), (sd * 0.072, 0.0005, 0.03)], 0.003, 'ala_borde', 3, flat=0.3)
+        part('mariposa_malla' + nm, wj, (0, 0, 0), wing, sharp=0)
+    roots.append(mr)
+    bake_ao(0.3, rays=16, ground=None, min_ao=0.55)
+    for r in roots:
+        r.location = (0, 0, 0)
+    export('fauna.glb')
+    for i, r in enumerate(roots):
+        r.location = (i * 1.3 - 2.0, 0.4 if i != 1 else 0.0, 0)
+    preview('fauna.png', (0, 0.3, 0), 6.0, elev=0.35, azim=0.5, size=(560, 360))
 
 
 # ---------------------------------------------------------------- muestrario
@@ -1047,7 +1210,7 @@ def contact_sheet(names, out='muestrario_modelos.jpg'):
 def main():
     os.makedirs(OUT, exist_ok=True)
     jobs = {'augusto': build_augusto, 'lobo': build_lobo, 'espantapajaros': build_espantapajaros,
-            'santuario': build_santuario, 'arboles': build_arboles, 'rocas': build_rocas}
+            'santuario': build_santuario, 'arboles': build_arboles, 'rocas': build_rocas, 'fauna': build_fauna}
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:]
     wanted = [a for a in args if a in jobs] or list(jobs)
     for name in wanted:

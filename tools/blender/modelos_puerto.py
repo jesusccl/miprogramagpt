@@ -5,10 +5,12 @@ Usa las mismas herramientas que modelos_campos_dorados.py (bmesh, oclusión
 horneada en colores de vértice, exportación glTF sin texturas) y genera:
 
     pueblo.glb    casas, armería, sastrería, taberna, faro, fuente, puestos,
-                  muelle, norays, barriles, cajas, faroles, bancos, bote y cartel
-    barcos.glb    bergantín (amarrado y con velas desplegadas) y balandra
+                  muelle, norays, barriles, cajas, faroles, bancos, bote, cartel,
+                  torre en ruinas, fogata y cofre del tesoro (con tapa articulada)
+    barcos.glb    bergantín (amarrado y con velas desplegadas), balandra y
+                  La Golondrina (el velero del jugador: botavara y timón articulados)
     aldeanos.glb  vecinos articulados con las mismas articulaciones que Augusto
-                  (armero, sastra, tabernero, capitana, marinero, aldeano, aldeana)
+                  (armero, sastra, tabernero, capitana, marinero, aldeano, pescador, aldeana)
 
 Cada modelo cuelga de un nodo raíz con su nombre; los vecinos llevan el prefijo
 en cada articulación (p. ej. "marinero_hips").
@@ -439,6 +441,91 @@ def cartel(g):
                [(0, 1, 2), (3, 5, 4)], 'tablas', M=F @ T(0, 0, -0.015))
 
 
+def cofre(g):
+    """Cofre del tesoro (la tapa va aparte, en la articulación cofre_tapa)."""
+    W, D, H = 0.9, 0.58, 0.46
+    g.box('tablas', M4((0, H / 2, 0), scale=(W, H, D)))
+    for sx in (-1, 1):
+        g.box('hierro', M4((sx * 0.28, H / 2, 0), scale=(0.06, H + 0.012, D + 0.024)))
+        for sz in (-1, 1):
+            g.box('oro', M4((sx * (W / 2 - 0.03), H / 2, sz * (D / 2 - 0.03)), scale=(0.08, H + 0.02, 0.08)))
+    g.box('hierro', M4((0, 0.03, 0), scale=(W + 0.02, 0.06, D + 0.02)))
+    g.box('oro', M4((0, H - 0.1, D / 2 + 0.012), scale=(0.12, 0.14, 0.02)))
+    g.box('hierro', M4((0, H - 0.13, D / 2 + 0.024), scale=(0.03, 0.05, 0.01)))
+    # monedas dentro (se ven al abrir)
+    g.box('oro', M4((0, H - 0.05, 0), scale=(W - 0.1, 0.03, D - 0.1)))
+    for k in range(14):
+        a = k * 2.399
+        r = 0.05 + 0.26 * ((k * 0.618) % 1.0)
+        g.loft([(0.0, 0.035, 0.035), (0.012, 0.035, 0.035)], 'oro', seg=10,
+               M=M4((math.cos(a) * r, H - 0.03 + 0.012 * (k % 3), math.sin(a) * r * 0.55), rot=(0.3 * math.sin(k), 0, 0.3 * math.cos(k))))
+    g.ico(0.05, 'fruta_roja', 1, M4((0.12, H - 0.01, 0.05)))
+    g.ico(0.04, 'vidrio', 1, M4((-0.15, H - 0.015, -0.06)))
+
+
+def cofre_tapa(g):
+    W, D = 0.9, 0.58
+    arc = [(-math.pi / 2 + math.pi * k / 10) for k in range(11)]
+    prof = [(0.17 * math.cos(a), D / 2 + D / 2 * math.sin(a)) for a in arc]   # (y, z) desde la bisagra trasera
+    rings = [[(x, y, z) for y, z in prof] for x in (-W / 2, W / 2)]
+    g.rings(rings, 'tablas', closed=False)
+    for x in (-W / 2, W / 2):
+        g.mesh([(x, y, z) for y, z in prof], [tuple(range(len(prof)))], 'tablas')
+    for sx in (-1, 1):
+        g.tube([(sx * 0.28, y * 1.06 + 0.004, (z - D / 2) * 1.04 + D / 2) for y, z in prof], 0.028, 'hierro', 6)
+        g.tube([(sx * (W / 2 - 0.02), y * 1.05, (z - D / 2) * 1.03 + D / 2) for y, z in prof], 0.022, 'oro', 5)
+    g.box('oro', M4((0, -0.06, D + 0.012), scale=(0.1, 0.12, 0.02)))
+
+
+def torre(g):
+    """Torre vigía en ruinas (Isla del Centinela)."""
+    R = 2.9
+
+    def broken(p, a, i):
+        v = fnoise(p, 0.9, 0.035, 80.0)
+        if i == 3:
+            top = 8.4 + 2.2 * math.sin(a * 1.0 + 0.6) + 1.1 * math.sin(a * 3.0 + 1.3) + 0.6 * math.sin(a * 7.0)
+            v.y = top
+        return v
+    g.loft([(-0.6, R + 0.55, R + 0.55), (0.35, R + 0.5, R + 0.5), (0.55, R + 0.12, R + 0.12)], 'piedra_osc', seg=28)
+    g.loft([(0.5, R, R), (3.5, R - 0.08, R - 0.08), (7.0, R - 0.16, R - 0.16), (10.0, R - 0.22, R - 0.22)], 'piedra', seg=32, fn=broken, cap1=False)
+    ring = [(math.cos(TAU * k / 32) * (R - 0.75), 0.0, math.sin(TAU * k / 32) * (R - 0.75)) for k in range(32)]
+    tops = [8.4 + 2.2 * math.sin(TAU * k / 32 + 0.6) + 1.1 * math.sin(3 * TAU * k / 32 + 1.3) + 0.6 * math.sin(7 * TAU * k / 32) for k in range(32)]
+    outer = [(math.cos(TAU * k / 32) * (R - 0.22), tops[k], math.sin(TAU * k / 32) * (R - 0.22)) for k in range(32)]
+    inner = [(p[0], tops[k] - 0.35, p[2]) for k, p in enumerate(ring)]
+    g.rings([outer, inner], 'piedra_osc', closed=True, cap0=False, cap1=False, loop=False)
+    g.mesh(inner, [tuple(reversed(range(32)))], 'piedra_osc')
+    # puerta con arco y ventanas en saetera
+    g.box('puerta', M4((0, 1.45, R - 0.12), scale=(1.15, 2.0, 0.4)))
+    g.tube([(math.cos(a) * 0.72, 2.45 + math.sin(a) * 0.72, R + 0.02) for a in [k * math.pi / 10 for k in range(11)]], 0.13, 'piedra_osc', 6)
+    for sx in (-1, 1):
+        g.box('piedra_osc', M4((sx * 0.72, 1.2, R + 0.02), scale=(0.26, 2.5, 0.2)))
+    for y, a in ((4.8, 0.9), (6.6, 2.6), (5.2, 4.2), (7.2, 5.4)):
+        F = T(math.cos(a) * (R - 0.1), y, math.sin(a) * (R - 0.1)) @ RY(math.pi / 2 - a)
+        g.box('puerta', F @ M4(scale=(0.22, 0.9, 0.3)))
+    # escombros y musgo
+    for k in range(16):
+        a = k * 2.399 + 0.3
+        r = R + 0.7 + 1.6 * ((k * 0.37) % 1.0)
+        s = 0.25 + 0.3 * ((k * 0.53) % 1.0)
+        g.ico(s, 'piedra', 1, M4((math.cos(a) * r, s * 0.4, math.sin(a) * r), rot=(k, k * 2.0, k * 0.5), scale=(1.0, 0.7, 1.2)),
+              deform=lambda p, k=k: fnoise(p, 3.0, 0.2, 90 + k))
+    for k in range(7):
+        a = k * 0.9 + 0.4
+        g.sphere(0.6, 'musgo', 10, 6, M4((math.cos(a) * (R + 0.3), 0.55 + 0.4 * (k % 3), math.sin(a) * (R + 0.3)), scale=(1.4, 0.35, 0.9)))
+
+
+def fogata(g):
+    """Restos de un campamento: piedras en círculo, leña y un tronco para sentarse."""
+    for k in range(9):
+        a = TAU * k / 9
+        g.ico(0.16, 'piedra', 1, M4((math.cos(a) * 0.55, 0.08, math.sin(a) * 0.55), rot=(k, k * 1.3, 0), scale=(1.2, 0.8, 1.0)))
+    for k in range(5):
+        a = TAU * k / 5 + 0.3
+        g.loft([(-0.35, 0.05, 0.05), (0.35, 0.045, 0.045)], 'madera', seg=6, axis='x', M=M4((0, 0.1 + 0.03 * (k % 2), 0), rot=(0, a, 0.25)))
+    g.loft([(-0.9, 0.2, 0.2), (0.9, 0.18, 0.18)], 'madera', seg=10, axis='x', M=M4((0.1, 0.18, -1.5), rot=(0, 0.3, 0)))
+
+
 # ---------------------------------------------------------------- cascos de barco
 def hull(g, L, B, draft, sheer0, amp, stations=18, mats=('casco', 'casco_color', 'casco_franja', 'casco_fondo'), transom=0.72, deck=True):
     prof = [(1.0, 0.0), (1.03, -0.28), (0.99, -0.52), (0.87, -0.72), (0.62, -0.88), (0.28, -0.97), (0.0, -1.0)]
@@ -593,6 +680,74 @@ def build_balandra(name):
     return root
 
 
+def build_golondrina(name='golondrina'):
+    """Balandra del jugador con botavara, vela mayor y timón articulados."""
+    root = joint(name, None, (0, 0, 0))
+    L, B, zm = 8.4, 1.35, 1.1
+    state = {}
+
+    def body(g):
+        width, sheer = hull(g, L, B, 0.95, 1.0, 0.32, stations=16, mats=('casco', 'casco_color', 'casco_franja', 'casco_fondo'), transom=0.7)
+        dy = lambda z: sheer((z + L / 2) / L) - 0.55
+        state['dy'], state['width'] = dy, width
+        # camarote bajo con portillos
+        g.box('casco_color', M4((0, dy(0.0) + 0.3, -0.1), scale=(1.55, 0.62, 2.1)))
+        g.box('cubierta', M4((0, dy(0.0) + 0.63, -0.1), scale=(1.65, 0.06, 2.2)))
+        for sx in (1, -1):
+            for z in (-0.7, 0.3):
+                g.loft([(0.0, 0.1, 0.1), (0.02, 0.1, 0.1)], 'vidrio', seg=12, axis='x', M=T(sx * 0.785, dy(0.0) + 0.33, z) @ M4(scale=(sx, 1, 1)))
+                g.tube(ellipse(0.11, 0.11, 0, 12), 0.018, 'casco_franja', 4, closed=True, M=T(sx * 0.79, dy(0.0) + 0.33, z) @ M4(rot=(0, 0, math.pi / 2)))
+        # bañera de popa con bancos
+        for sx in (1, -1):
+            g.box('tablas', M4((sx * 0.78, dy(-2.6) + 0.28, -2.7), scale=(0.34, 0.07, 1.9)))
+            g.box('casco_color', M4((sx * 0.78, dy(-2.6) + 0.13, -2.7), scale=(0.3, 0.26, 1.85)))
+        # barandilla con candeleros
+        for sx in (1, -1):
+            rail = []
+            for k in range(13):
+                t = 0.06 + 0.86 * k / 12
+                z = -L / 2 + t * L
+                rail.append((sx * width(t) * 0.97, sheer(t) - 0.55 + 0.42, z))
+                if k % 2 == 0:
+                    g.tube([(sx * width(t) * 0.97, sheer(t) - 0.55, z), rail[-1]], 0.018, 'hierro', 4)
+            g.tube(rail, 0.02, 'hierro', 5)
+        # mástil, bauprés, jarcia y foque
+        g.loft([(dy(zm) - 0.3, 0.12, 0.12, 0, zm), (9.6, 0.065, 0.065, 0, zm), (9.8, 0.0, 0.0, 0, zm)], 'madera', seg=8)
+        g.tube([(0, dy(L / 2 - 0.8) + 0.45, L / 2 - 0.9), (0, dy(L / 2) + 0.62, L / 2 + 1.25)], [0.06, 0.04], 'madera', 6)
+        sail(g, [(0, 8.5, zm + 0.12), (0, 8.5, zm + 0.12), (0, dy(L / 2) + 0.9, L / 2 + 1.1), (0, dy(zm) + 0.95, zm + 0.5)], 0.32, 4, 5)
+        g.tube([(0, 9.5, zm), (0, dy(L / 2) + 0.65, L / 2 + 1.2)], 0.015, 'cuerda', 4)
+        g.tube([(0, 9.5, zm), (0, dy(-L / 2) + 0.7, -L / 2 + 0.15)], 0.015, 'cuerda', 4)
+        for sx in (1, -1):
+            t = (zm - 0.35 + L / 2) / L
+            g.tube([(0.05 * sx, 8.4, zm), (sx * width(t) * 0.95, dy(zm - 0.35) + 0.1, zm - 0.35)], 0.013, 'cuerda', 4)
+            g.box('madera', M4((sx * 0.42, dy(zm) + 0.08, zm - 0.1), scale=(0.08, 0.16, 0.08)))
+        # farol de popa y cabo adujado
+        g.loft([(0.0, 0.03, 0.03), (0.8, 0.025, 0.025)], 'hierro', seg=6, M=T(0.6, dy(-L / 2 + 0.3), -L / 2 + 0.3))
+        g.sphere(0.1, 'lampara', 10, 8, M4((0.6, dy(-L / 2 + 0.3) + 0.9, -L / 2 + 0.3)))
+        g.tube(ellipse(0.2, 0.2, dy(1.8) + 0.05, 12, 0.35, 2.0), 0.03, 'cuerda', 5, closed=True)
+        g.tube(ellipse(0.14, 0.14, dy(1.8) + 0.1, 12, 0.35, 2.0), 0.03, 'cuerda', 5, closed=True)
+    part(name + '_casco', root, (0, 0, 0), body, sharp=40)
+    dy = state['dy']
+    by = dy(zm) + 0.95
+    boom = joint(name + '_botavara', root, (0, by, zm))
+
+    def mayor(g):
+        g.loft([(0.12, 0.05, 0.05), (-4.0, 0.042, 0.042)], 'madera', seg=6, axis='z')
+        sail(g, [(0, 9.3 - by, -0.13), (0, 9.3 - by, -0.13), (0, 0.1, -3.9), (0, 0.1, -0.13)], 0.42, 5, 6)
+    part(name + '_mayor', boom, (0, 0, 0), mayor, sharp=0)
+    zs = -L / 2 + 0.02
+    rud = joint(name + '_timon', root, (0, dy(zs) + 0.05, zs))
+
+    def timon(g):
+        g.box('tablas', M4((0, -0.75, -0.14), scale=(0.07, 1.25, 0.42)))
+        g.tube([(0, 0.0, 0.0), (0, 0.2, 0.25), (0, 0.3, 0.7), (0, 0.33, 1.3)], [0.04, 0.035, 0.03, 0.028], 'madera', 6)
+        g.sphere(0.04, 'cuero', 8, 6, M4((0, 0.33, 1.3), scale=(1, 1, 1.8)))
+    part(name + '_cana', rud, (0, 0, 0), timon)
+    joint(name + '_piloto', root, (0.42, dy(-2.75), -2.75))
+    joint(name + '_bandera', root, (0, 9.8, zm))
+    return root
+
+
 def bote(g):
     hull(g, 3.8, 0.75, 0.32, 0.4, 0.16, stations=10, mats=('casco', 'casco_color', 'casco_color', 'casco_fondo'), transom=0.55, deck=False)
     for z in (-1.1, 0.0, 0.9):
@@ -617,6 +772,8 @@ def human(prefix, x_off, o):
         g.loft([(-0.03, 0.16, 0.13), (0.08, 0.158 + belly * 0.05, 0.127 + belly * 0.08), (0.2, 0.166 + belly * 0.08, 0.132 + belly * 0.12),
                 (0.33, 0.172, 0.13)], shirt, seg=18)
         g.loft([(-0.05, 0.168 + belly * 0.02, 0.138 + belly * 0.03), (-0.01, 0.168 + belly * 0.02, 0.138 + belly * 0.03)], o.get('belt', 'cuero'), seg=18)
+        if not o.get('skirt'):
+            g.box('oro', M4((0, -0.03, 0.14 + belly * 0.03), scale=(0.042, 0.034, 0.012)))
         if o.get('skirt'):
             g.loft([(0.05, 0.18, 0.16), (-0.2, 0.25, 0.22), (-0.55, 0.3, 0.27), (-0.86, 0.33, 0.3)], o['skirt'], seg=24, cap0=False, cap1=False,
                    fn=lambda p, a, i: (p[0] * (1 + 0.05 * math.sin(a * 8) * i / 3), p[1], p[2] * (1 + 0.05 * math.sin(a * 8) * i / 3)))
@@ -648,6 +805,9 @@ def human(prefix, x_off, o):
             for sd in (1, -1):
                 g.tube([(0.07 * sd, -0.05, 0.14), (0.1 * sd, 0.04, 0.08), (0.08 * sd, 0.06, -0.05)], 0.01, o['apron'], 4)
         g.tube(ellipse(0.085, 0.072, 0.055, 16), 0.016, shirt, 6, closed=True)
+        if not (o.get('vest') or o.get('coat') or o.get('apron') or o.get('skirt')):
+            for y, z in ((0.02, 0.128), (-0.05, 0.146), (-0.12, 0.15), (-0.19, 0.147)):
+                g.sphere(0.008, 'hierro', 6, 5, M4((0, y, z * (1 + belly * 0.05)), scale=(1, 1, 0.5)))
         if o.get('tape'):
             g.tube([(0.07, 0.06, 0.02), (0.1, -0.05, 0.1), (0.1, -0.22, 0.15)], 0.012, 'cinta', 4, flat=0.3)
             g.tube([(-0.07, 0.06, 0.02), (-0.09, -0.05, 0.1), (-0.08, -0.18, 0.15)], 0.012, 'cinta', 4, flat=0.3)
@@ -664,16 +824,14 @@ def human(prefix, x_off, o):
                 x *= 1 - 0.2 * k
                 z = z * (1 - 0.08 * k) + (0.012 * k if z > 0 else 0.0)
             return (x, y, z)
-        g.sphere(0.12, skin, 20, 14, M4((0, 0.15, 0), scale=(0.93, 1.06, 1.0)), deform=jaw)
-        g.ico(1.0, skin, 1, M4((0, 0.135, 0.118), scale=(0.02, 0.028, 0.024)))
-        for s in (1, -1):
-            g.sphere(1.0, skin, 8, 6, M4((0.112 * s, 0.15, -0.005), scale=(0.014, 0.034, 0.026)))
-            g.sphere(0.014, 'ojo', 8, 6, M4((0.04 * s, 0.165, 0.104)))
-            g.box(hair, M4((0.043 * s, 0.188, 0.108), rot=(0.2, 0, -0.18 * s), scale=(0.036, 0.01, 0.012)))
-        g.box('ojo', M4((0, 0.1, 0.106), scale=(0.028, 0.004, 0.006)))
+        mc.face(g, skin, hair, o.get('iris', 'iris_marron'), brow=o.get('brow', 0.3), smile=o.get('smile', 0.5))
         style = o.get('hair_style', 'corto')
         if style in ('corto', 'mono', 'coleta', 'largo'):
             g.sphere(0.127, hair, 18, 12, M4((0, 0.172, -0.016), scale=(1.0, 0.85, 1.02)))
+            if style == 'corto':   # flequillo de mechones finos
+                for k in range(7):
+                    x = -0.066 + k * 0.022
+                    g.tube([(x, 0.262, 0.06), (x * 1.08, 0.24, 0.094), (x * 1.1 + 0.008, 0.214, 0.106)], [0.013, 0.009, 0.003], hair, 8)
         if style == 'calvo':
             g.sphere(0.124, hair, 18, 10, M4((0, 0.14, -0.02), scale=(1.0, 0.55, 1.0)), deform=lambda p: (p[0], min(p[1], 0.17), p[2]))
         if style == 'mono':
@@ -702,6 +860,11 @@ def human(prefix, x_off, o):
                      deform=lambda p: (p[0], max(p[1], 0.15 - 0.05 * max(0.0, -p[2]) / 0.13), p[2]))
             g.sphere(0.028, hm, 8, 6, M4((0, 0.16, -0.14)))
             g.tube([(0.01, 0.155, -0.145), (0.03, 0.08, -0.17), (0.04, 0.02, -0.16)], [0.022, 0.018, 0.01], hm, 6, flat=0.35)
+        if hat == 'ancho':   # sombrero de paja de ala ancha
+            g.loft([(0.0, 0.135, 0.135), (-0.004, 0.24, 0.24), (-0.03, 0.33, 0.33)], hm, seg=36, cap0=False, cap1=False, M=T(0, 0.225, 0),
+                   fn=lambda p, a, i: (p[0], p[1] - 0.012 * math.sin(a * 2) * i / 2, p[2]))
+            g.sphere(0.138, hm, 18, 10, M4((0, 0.235, 0), scale=(1.0, 0.8, 1.02)), deform=lambda p: (p[0], max(p[1], 0.225), p[2]))
+            g.loft([(0.232, 0.141, 0.141), (0.262, 0.137, 0.137)], 'cuero', seg=24, cap0=False, cap1=False)
         if hat == 'tricornio':
             def lift(p, a, i):
                 corner = sum(max(0.0, math.cos(1.5 * (a - math.pi / 2 - c))) ** 6 for c in (0.0, TAU / 3, -TAU / 3))
@@ -738,7 +901,7 @@ def human(prefix, x_off, o):
                 g.loft([(-0.2, 0.048 * ub, 0.046 * ub), (-0.245, 0.048 * ub, 0.046 * ub)], shirt, seg=12)
         part(P('antebrazo' + nm), el, (0, 0, 0), fore)
         hand = joint(P('hand' + nm), el, (0, -0.29, 0))
-        part(P('mano' + nm), hand, (0, 0, 0), lambda g: g.sphere(0.045, skin, 12, 8, M4((0, 0.0, 0.0), scale=(0.85, 1.12, 0.95))))
+        part(P('mano' + nm), hand, (0, 0, 0), lambda g, side=side: mc.hand(g, skin, side, 0.4))
 
     for side, nm in ((1, 'L'), (-1, 'R')):
         hip = joint(P('hip' + nm), hips, (0.1 * side, -0.02, 0))
@@ -760,22 +923,25 @@ def human(prefix, x_off, o):
                 g.loft([(-0.28, 0.056, 0.058), (-0.44, 0.06, 0.064)], o.get('shoes', 'cuero'), seg=12)
                 g.loft([(-0.075, 0.054, 0.042, 0.0, -0.432), (0.06, 0.056, 0.042, 0.0, -0.438), (0.13, 0.046, 0.032, 0.0, -0.446),
                         (0.165, 0.0, 0.0, 0.0, -0.45)], o.get('shoes', 'cuero'), seg=12, axis='z')
-                g.box('vaina', M4((0, -0.462, 0.045), scale=(0.115, 0.018, 0.25)))
+                g.box('suela', M4((0, -0.462, 0.045), scale=(0.117, 0.022, 0.255)))
+                g.box('suela', M4((0, -0.448, -0.06), scale=(0.1, 0.03, 0.07)))
         part(P('pierna' + nm), knee, (0, 0, 0), shin)
     return root
 
 
 NPCS = [
-    ('armero', dict(hair='pelo_gris', hair_style='calvo', beard='barba', shirt='camisa', pants='pantalon', apron='cuero', bulk=1.25, belly=0.3,
+    ('armero', dict(iris='iris_marron', hair='pelo_gris', hair_style='calvo', beard='barba', shirt='camisa', pants='pantalon', apron='cuero', bulk=1.25, belly=0.3,
                     sleeves='cortas', skin='piel_osc')),
-    ('sastra', dict(hair='pelo_gris', hair_style='mono', skirt='vestido', shirt='vestido', pants='vestido', glasses=True, tape=True, skin='piel_clara')),
-    ('tabernero', dict(hair='pelo', hair_style='calvo', beard='bigote', belly=1.0, shirt='camisa', pants='pantalon', apron='delantal', sleeves='cortas')),
-    ('capitana', dict(hair='pelo_rojo', hair_style='coleta', coat='tela_azul', shirt='camisa', pants='pantalon', hat='tricornio', hat_mat='fieltro',
+    ('sastra', dict(iris='iris_azul', hair='pelo_gris', hair_style='mono', skirt='vestido', shirt='vestido', pants='vestido', glasses=True, tape=True, skin='piel_clara')),
+    ('tabernero', dict(iris='iris_marron', hair='pelo', hair_style='calvo', beard='bigote', belly=1.0, shirt='camisa', pants='pantalon', apron='delantal', sleeves='cortas')),
+    ('capitana', dict(iris='iris_verde', hair='pelo_rojo', hair_style='coleta', coat='tela_azul', shirt='camisa', pants='pantalon', hat='tricornio', hat_mat='fieltro',
                       skin='piel_clara')),
-    ('marinero', dict(hair='pelo', hair_style='corto', beard='barba', shirt='rayas', pants='pantalon_azul', hat='panuelo', hat_mat='rojo_osc',
+    ('marinero', dict(iris='iris_marron', hair='pelo', hair_style='corto', beard='barba', shirt='rayas', pants='pantalon_azul', hat='panuelo', hat_mat='rojo_osc',
                       feet='descalzo', sleeves='cortas', skin='piel_osc')),
-    ('aldeano', dict(hair='pelo_rubio', hair_style='corto', shirt='camisa', vest='chaleco_v', pants='pantalon', hat='gorra', hat_mat='tela_verde')),
-    ('aldeana', dict(hair='pelo_rojo', hair_style='largo', skirt='tela_verde', shirt='camisa', pants='tela_verde', apron='delantal', hat='panuelo',
+    ('aldeano', dict(iris='iris_azul', hair='pelo_rubio', hair_style='corto', shirt='camisa', vest='chaleco_v', pants='pantalon', hat='gorra', hat_mat='tela_verde')),
+    ('pescador', dict(iris='iris_azul', hair='pelo_gris', hair_style='corto', beard='barba', shirt='camisa', vest='chaleco_v', pants='pantalon_azul',
+                      hat='ancho', hat_mat='paja', feet='descalzo', sleeves='cortas', skin='piel_osc', smile=0.9)),
+    ('aldeana', dict(iris='iris_verde', hair='pelo_rojo', hair_style='largo', skirt='tela_verde', shirt='camisa', pants='tela_verde', apron='delantal', hat='panuelo',
                      hat_mat='tela_azul')),
 ]
 
@@ -783,7 +949,8 @@ NPCS = [
 # ---------------------------------------------------------------- construcción y exportación
 PUEBLO = [('casa_a', casa_a), ('casa_b', casa_b), ('casa_c', casa_c), ('armeria', armeria), ('sastreria', sastreria), ('taberna', taberna),
           ('faro', faro), ('fuente', fuente), ('puesto', puesto), ('muelle', muelle), ('noray', noray), ('barril', lambda g: barrel(g, Matrix())),
-          ('caja', lambda g: crate(g, Matrix())), ('farol', farol), ('banco', banco), ('cartel', cartel), ('bote', bote)]
+          ('caja', lambda g: crate(g, Matrix())), ('farol', farol), ('banco', banco), ('cartel', cartel), ('bote', bote),
+          ('torre', torre), ('fogata', fogata), ('cofre', cofre)]
 
 
 def build_pueblo():
@@ -793,6 +960,8 @@ def build_pueblo():
         root = joint(name, None, (i * 40.0, 8.0 if name == 'muelle' else 0.0, 0))
         part(name + '_malla', root, (0, 0, 0), fn, sharp=40)
         roots.append(root)
+    tapa = joint('cofre_tapa', roots[-1], (0, 0.46, -0.29))
+    part('cofre_tapa_malla', tapa, (0, 0, 0), cofre_tapa, sharp=40)
     joint('armeria_npc', roots[3], (0, 0, 1.7))
     joint('sastreria_npc', roots[4], (1.3, 0, 4.4))
     joint('taberna_npc', roots[5], (1.8, 0, 4.9))
@@ -812,15 +981,18 @@ def build_barcos():
     a = build_bergantin('bergantin', False)
     b = build_bergantin('bergantin_velas', True)
     c = build_balandra('balandra')
+    d = build_golondrina('golondrina')
     b.location = (40, 0, 0)
     c.location = (80, 0, 0)
+    d.location = (120, 0, 0)
     bake_ao(1.5, rays=20, ground=None, min_ao=0.4)
-    for r in (a, b, c):
+    for r in (a, b, c, d):
         r.location = (0, 0, 0)
     export('barcos.glb')
     a.location = (-9, 0, 0)
     b.location = (9, 0, -4)
     c.location = (24, 0, 6)
+    d.location = (14, 0, 9)
     preview('barcos.png', (7, 7, 0), 62.0, elev=0.2, azim=1.05, size=(640, 420))
 
 
