@@ -14,6 +14,7 @@ const GAMES_DATA = [
   { id:'wwe_augusto',       title:'WWE Augusto',       cat:'action',   catLabel:'Acción',     emoji:'🤼', bg:'#2d1a0d', accent:'#ef4444', plays:'6.6M', rating:4.8, desc:'Augusto sube al ring y derrota a los luchadores con su Stunner final' },
   { id:'laureano_nightmare',title:"AugustoNightmare", cat:'horror', catLabel:'Terror',     emoji:'🩸', bg:'#1a0606', accent:'#d04040', plays:'NUEVO',rating:4.7, desc:'Sobrevive a La Monja en el sótano. Recolecta 4 llaves y escapa por la azotea ⚠️ Terror' },
   { id:'campos_dorados',    title:'Campos Dorados',    cat:'action',   catLabel:'Acción',     emoji:'🌾', bg:'#2d220a', accent:'#e0b04a', plays:'NUEVO',rating:4.9, desc:'Aventura 3D: navega en tu velero entre islas, busca tesoros, compra armas y ropa en Bahía Serena, enciende 5 santuarios y vence al Guardián del Trigo' },
+  { id:'furious_cars_2',    title:'Furious Cars 2',    cat:'racing',   catLabel:'Carreras',   emoji:'🏎️', bg:'#2d0f08', accent:'#ff5a1f', plays:'NUEVO',rating:5.0, desc:'Carreras 3D con gráficos de nueva generación: 6 pilotos, nitro, derrapes y 3 coches en el circuito Sierra Dorada' },
 ];
 
 const CATEGORIES = [
@@ -23,6 +24,7 @@ const CATEGORIES = [
   { id:'action',   label:'Acción',      icon:'⚡' },
   { id:'strategy', label:'Estrategia',  icon:'♟️' },
   { id:'horror',   label:'Terror',      icon:'🩸' },
+  { id:'racing',   label:'Carreras',    icon:'🏁' },
 ];
 
 // ===================== SCORE HELPERS =====================
@@ -200,7 +202,7 @@ function GameCard({ game, onClick, delay=0 }) {
 }
 
 // ===================== FEATURED BANNER (rota entre los 3 de Augusto) =====================
-const AUGUSTO_IDS = ['gta_augusto','minecraft_augusto','wwe_augusto'];
+const AUGUSTO_IDS = ['furious_cars_2','gta_augusto','minecraft_augusto','wwe_augusto'];
 
 function FeaturedBanner({ onPlay }) {
   const games = AUGUSTO_IDS.map(id => GAMES_DATA.find(g => g.id === id)).filter(Boolean);

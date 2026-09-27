@@ -13,11 +13,12 @@ const GAME_COMPONENTS = {
   wwe_augusto:        () => <WWEAugustoGame />,
   laureano_nightmare: () => <LaureanoNightmareGame />,
   campos_dorados:     () => <CamposDoradosGame />,
+  furious_cars_2:     () => <FuriousCars2Game />,
 };
 
 function GameModal({ game, onClose, onScore }) {
   const GameComp = GAME_COMPONENTS[game.id];
-  const isIframeGame = ['gta_augusto','minecraft_augusto','wwe_augusto','laureano_nightmare','campos_dorados'].includes(game.id);
+  const isIframeGame = ['gta_augusto','minecraft_augusto','wwe_augusto','laureano_nightmare','campos_dorados','furious_cars_2'].includes(game.id);
 
   React.useEffect(() => {
     // Listen for score events from games
