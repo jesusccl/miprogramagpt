@@ -93,4 +93,8 @@ function CamposDoradosGame() {
   return <AugustoIframe src="campos-dorados.html" title="Campos Dorados" aspectRatio="16 / 9" />;
 }
 
-Object.assign(window, { GTAAugustoGame, MinecraftAugustoGame, WWEAugustoGame, LaureanoNightmareGame, CamposDoradosGame });
+function FuriousCars2Game() {
+  return <AugustoIframe src="furious-cars-2.html" title="Furious Cars 2" aspectRatio="16 / 9" />;
+}
+
+Object.assign(window, { GTAAugustoGame, MinecraftAugustoGame, WWEAugustoGame, LaureanoNightmareGame, CamposDoradosGame, FuriousCars2Game });
